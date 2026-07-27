@@ -112,6 +112,25 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
+  // Django builds the manifest from SiteSettings, so an admin-uploaded logo or
+  // a renamed app only shows up if this is fetched fresh. It is precached and
+  // would otherwise be served by the cache-first branch below forever. Network
+  // first, with the cached copy as the offline fallback.
+  if (url.pathname === '/manifest.json') {
+    event.respondWith(
+      fetch(request)
+        .then((response) => {
+          if (response.ok) {
+            const clone = response.clone();
+            caches.open(DYNAMIC_CACHE).then((cache) => cache.put(request, clone));
+          }
+          return response;
+        })
+        .catch(() => caches.match(request))
+    );
+    return;
+  }
+
   // Static assets — cache first, network fallback
   event.respondWith(
     caches.match(request).then((cached) => {
