@@ -63,7 +63,7 @@ info "[1/12] Installing system packages..."
 apt-get update -qq
 apt-get install -y -qq nginx python3 python3-venv python3-pip \
   postgresql postgresql-contrib libpq-dev \
-  git curl sudo ca-certificates gnupg openssl
+  git curl sudo ca-certificates gnupg openssl iproute2
 if [ "$IS_IP" = false ]; then
   apt-get install -y -qq certbot python3-certbot-nginx
 fi
@@ -423,7 +423,36 @@ UNIT
 systemctl daemon-reload
 systemctl enable usta-gunicorn
 systemctl restart usta-gunicorn
-ok "Gunicorn service started"
+
+# A process left over from an earlier hand-rolled deploy keeps :8000 bound,
+# the unit fails to bind and restarts in a loop, and nginx proxies to the old
+# code regardless - a site that looks up while every API call 400s, because
+# that old process reads an ALLOWED_HOSTS this domain is not in.
+PORT_PID=$(ss -tlnpH 'sport = :8000' 2>/dev/null | grep -oP 'pid=\K[0-9]+' | head -1 || true)
+MAIN_PID=$(systemctl show -p MainPID --value usta-gunicorn 2>/dev/null || echo 0)
+if [ -n "$PORT_PID" ] && [ "$PORT_PID" != "$MAIN_PID" ]; then
+  warn "Port 8000 is held by PID $PORT_PID, but usta-gunicorn's main PID is $MAIN_PID."
+  warn "That is a foreign process serving your API. Inspect and kill it:"
+  warn "  ps -fp $PORT_PID && kill $PORT_PID && systemctl restart usta-gunicorn"
+fi
+
+# Give the workers a moment, then confirm the app answers as the deploy's own
+# host. A 400 here is Django's DisallowedHost: whatever is on :8000 is not
+# reading .env.prod.
+for _ in $(seq 1 15); do
+  curl -sf -o /dev/null -H "Host: $SERVER" http://127.0.0.1:8000/api/version && break
+  sleep 1
+done
+GUNICORN_CODE=$(curl -s -o /dev/null -w '%{http_code}' -H "Host: $SERVER" \
+  http://127.0.0.1:8000/api/version 2>/dev/null || echo 000)
+case "$GUNICORN_CODE" in
+  200) ok "Gunicorn service started and answering on :8000" ;;
+  400) warn "Gunicorn answers 400 for Host: $SERVER — Django's DisallowedHost."
+       warn "The process on :8000 is not reading .env.prod. Check:"
+       warn "  systemctl status usta-gunicorn --no-pager -l; ss -tlnp | grep :8000" ;;
+  000) warn "Nothing answering on :8000. Check: journalctl -u usta-gunicorn -n 50 --no-pager" ;;
+  *)   warn "Gunicorn answered $GUNICORN_CODE on /api/version — expected 200" ;;
+esac
 
 # ── SSL ─────────────────────────────────────────────────────────────
 if [ "$IS_IP" = false ]; then
