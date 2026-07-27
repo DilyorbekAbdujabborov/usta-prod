@@ -4,9 +4,11 @@ __pycache__/
 *.pyc
 *.pyo
 *.egg-info/
-dist/
-build/
 *.egg
+
+# Node
+node_modules/
+package-lock.json
 
 # Django
 staticfiles/
@@ -15,6 +17,11 @@ db.sqlite3
 logs/
 *.log
 gunicorn.pid
+
+# Build
+dist/
+build/
+coverage/
 
 # Environment
 .env

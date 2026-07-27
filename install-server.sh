@@ -101,8 +101,9 @@ ok "Django ready"
 # ── 7. Frontend build ───────────────────────────────────────────────
 info "[7/9] Building frontend..."
 cd "$INSTALL_DIR/ustalaruz"
-npm install
-npm run build
+rm -rf node_modules package-lock.json
+npm install 2>&1 | tail -5
+npm run build 2>&1
 cd "$INSTALL_DIR"
 ok "Frontend built"
 
