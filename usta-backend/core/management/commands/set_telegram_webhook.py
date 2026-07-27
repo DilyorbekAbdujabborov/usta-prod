@@ -115,6 +115,17 @@ class Command(BaseCommand):
         # site itself is reachable.
         url = f'https://{host}/api/telegram/{path}/'
 
+        # Unregister first. setWebhook does overwrite in place, but clearing
+        # explicitly drops the queue built up against the old host in its own
+        # step, so a failure here is distinguishable from a failure to
+        # register - and the old URL is gone either way rather than left live
+        # by a half-finished change.
+        previous = (call(token, 'getWebhookInfo').get('result') or {}).get('url') or '(none)'
+        removed = call(token, 'deleteWebhook', {'drop_pending_updates': 'true'})
+        if not removed.get('ok'):
+            raise CommandError(f"deleteWebhook failed: {removed.get('description')}")
+        self.stdout.write(f'Removed previous webhook: {previous}')
+
         response = call(token, 'setWebhook', {
             'url': url,
             'secret_token': secret,
@@ -126,7 +137,13 @@ class Command(BaseCommand):
             'drop_pending_updates': 'true',
         })
         if not response.get('ok'):
-            raise CommandError(f"setWebhook failed: {response.get('description')}")
+            # The delete already went through, so say so plainly: the bot has no
+            # webhook at all right now, not the old one.
+            raise CommandError(
+                f"setWebhook failed: {response.get('description')}. "
+                'The previous webhook was already removed, so the bot currently '
+                'has none — re-run this command once the cause is fixed.'
+            )
 
         # Report the path masked: it is a shared secret, and this output ends up
         # in deploy logs.
