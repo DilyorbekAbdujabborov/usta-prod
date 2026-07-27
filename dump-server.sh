@@ -146,13 +146,21 @@ echo "--- dist size: $(du -sh '"$INSTALL_DIR"'/ustalaruz/dist 2>&1 | cut -f1)"
 echo "--- assets:"
 ls -S '"$INSTALL_DIR"'/ustalaruz/dist/assets 2>/dev/null | head -15'
 
-section "HTTP probes (localhost)"
-run 'for p in / /api/version /admin/ /static/admin/css/base.css /manifest.json; do
-  printf "%-34s %s\n" "$p" "$(curl -s -o /dev/null -w "%{http_code} %{size_download}b" "localhost$p" 2>&1)"
+section "HTTP probes"
+# server_name is the deploy's domain, so a request for "localhost" falls into
+# whatever other server block is default and 404s regardless of site health.
+run 'SN=$(grep -m1 -oP "server_name\s+\K[^;]+" /etc/nginx/sites-available/usta 2>/dev/null | awk "{print \$1}")
+[ -z "$SN" ] || [ "$SN" = "_" ] && SN=localhost
+echo "Host: $SN"
+echo
+for p in / /api/version /admin/ /static/admin/css/base.css /manifest.json; do
+  printf "%-34s %s\n" "$p" "$(curl -s -o /dev/null -w "%{http_code} %{size_download}b" -H "Host: $SN" "http://127.0.0.1$p" 2>&1)"
 done
 echo
+printf "%-34s %s\n" "gunicorn direct :8000" "$(curl -s -o /dev/null -w "%{http_code}" http://127.0.0.1:8000/api/version 2>&1 || echo "not listening")"
+echo
 echo "--- /api/version body:"
-curl -s localhost/api/version 2>&1 | head -c 400'
+curl -s -H "Host: $SN" http://127.0.0.1/api/version 2>&1 | head -c 400'
 
 section "Gunicorn error log (scrubbed, last 60)"
 fence; tail -60 "$BACKEND/logs/gunicorn_error.log" 2>&1 | scrub >>"$OUT"; fence

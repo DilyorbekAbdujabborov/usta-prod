@@ -131,10 +131,15 @@ fi
 
 # ── 4. Frontend .env ────────────────────────────────────────────────
 info "[4/12] Configuring frontend environment..."
+# The frontend treats VITE_API_BASE_URL as an ORIGIN and appends /api itself
+# (src/lib/api.ts: fetch(`${API_BASE}/api${path}`)). Putting /api here produced
+# requests to /api/api/... and a 404 on every call. Empty means same-origin,
+# which is what nginx serves - and it keeps working over both http and https
+# without the value having to match the scheme.
 cat > "$INSTALL_DIR/ustalaruz/.env" <<EOF
-VITE_API_BASE_URL=$PROTO://$SERVER/api
+VITE_API_BASE_URL=
 EOF
-ok "Frontend .env configured"
+ok "Frontend .env configured (same-origin API)"
 
 # ── 5. Python virtual environment ───────────────────────────────────
 info "[5/12] Setting up Python virtual environment..."
@@ -486,10 +491,19 @@ print('  WARNING: no users — is this the database you expected?' if n == 0 els
 cd "$INSTALL_DIR"
 
 echo ""
-info "Local HTTP check:"
-echo "  /       -> $(curl -s -o /dev/null -w '%{http_code}' localhost/ || echo 'no answer')"
-echo "  /api/   -> $(curl -s -o /dev/null -w '%{http_code}' localhost/api/version || echo 'no answer')"
-echo "  /admin/ -> $(curl -s -o /dev/null -w '%{http_code}' localhost/admin/ || echo 'no answer')"
+# Sent with the deploy's own Host header: server_name is the domain, so a
+# request for "localhost" lands in whatever other server block is default and
+# 404s there no matter how healthy this site is.
+info "Local HTTP check (Host: $SERVER):"
+probe() {
+  printf '  %-22s %s\n' "$1" \
+    "$(curl -s -o /dev/null -w '%{http_code}' -H "Host: $SERVER" "http://127.0.0.1$1" || echo 'no answer')"
+}
+probe /
+probe /api/version
+probe /admin/
+probe /static/admin/css/base.css
+echo "  gunicorn on :8000      $(curl -s -o /dev/null -w '%{http_code}' http://127.0.0.1:8000/api/version || echo 'not listening')"
 
 # ── Done ────────────────────────────────────────────────────────────
 echo ""

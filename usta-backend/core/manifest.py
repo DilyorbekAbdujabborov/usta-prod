@@ -1,3 +1,5 @@
+import os
+
 from django.http import JsonResponse
 
 
@@ -53,8 +55,12 @@ def manifest_view(request):
         "theme_color": theme_color,
         "orientation": "portrait",
         "scope": "/",
+        # Only needed when the API answers from a different origin than the
+        # PWA, as it did on PythonAnywhere. Behind nginx the two share an
+        # origin, so this stays empty unless PWA_SCOPE_EXTENSIONS names one.
         "scope_extensions": [
-            {"origin": "ustaback.pythonanywhere.com"},
+            {"origin": o.strip()}
+            for o in os.getenv('PWA_SCOPE_EXTENSIONS', '').split(',') if o.strip()
         ],
         "tab_strip": {
             "home_tab": {"scope_patterns": [{"pathname": "/app/*"}]},

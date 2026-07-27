@@ -10,9 +10,6 @@
 	"theme_color": "#1D4ED8",
 	"orientation": "portrait",
 	"scope": "/",
-	"scope_extensions": [
-		{ "origin": "ustaback.pythonanywhere.com" }
-	],
 	"tab_strip": {
 		"home_tab": {
 			"scope_patterns": [{ "pathname": "/app/*" }]
