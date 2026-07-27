@@ -43,7 +43,7 @@ usta_prod/                     # Usta loyihasining production deploy repozitoriy
 │   ├── package.json           # Node.js paketlar
 │   ├── vite.config.ts         # Vite sozlamalari (proxy, build)
 │   ├── tsconfig.json          # TypeScript sozlamalari
-│   ├── drizzle.config.ts      # Drizzle ORM sozlamalari
+│   ├── vitest.config.ts       # Test sozlamalari
 │   └── DESIGN.md, PRODUCT.md  # Dizayn va mahsulot hujjatlari
 │
 ├── usta_nginx.conf            # Nginx sozlamalari (proxy, static, SPA)
@@ -77,7 +77,7 @@ Internet
 | `usta-backend/gunicorn.conf.py` | Gunicorn worker, port, log sozlamalari |
 | `usta-backend/.env` | Dev shabloni. Production da buni tahrirlamang |
 | `usta-backend/.env.prod` | Production qiymatlari (`chmod 600`). `settings.py` uni `.env` dan keyin `override=True` bilan yuklaydi, ya'ni shu fayl ustun |
-| `ustalaruz/.env` | `VITE_API_BASE_URL` — backend API manzili |
+| `ustalaruz/.env` | `VITE_API_BASE_URL` — backend **origini** (`/api` siz). Bo'sh = same-origin, nginx deploy uchun to'g'ri qiymat |
 | `usta-backend/requirements.txt` | Python paketlar ro'yxati |
 | `ustalaruz/package.json` | Frontend paketlar ro'yxati |
 
@@ -112,8 +112,9 @@ barcha sessiya, JWT va push obunalari kuyadi).
 | Web push | `vapid_private.pem` yo'q bo'lsa generatsiya qilinadi, public half `.env.prod` ga yoziladi |
 | `/root` ruxsati | `chmod 755` — nginx `www-data` bo'lib ishlaydi va `0700 /root` orqali `dist/`, `static/`, `media/` ga kira olmaydi (403). Loyiha `/root` da turgani uchun shart |
 | SSL | Email berilsa `certbot --nginx --redirect`. `www.` DNS'i yo'q bo'lsa faqat asosiy domen so'raladi |
-| Cache tozalash | Oxirida apt/yarn/npm/pip download cachelari o'chiriladi, qancha joy bo'shagani yoziladi. `CLEAN_NODE_MODULES=1` bersangiz `node_modules` ham o'chadi |
-| Tekshirish | Oxirida `manage.py check --deploy` va `/`, `/api/`, `/admin/` uchun HTTP kod |
+| Cache tozalash | Oxirida apt/npm/pip download cachelari o'chiriladi, qancha joy bo'shagani yoziladi. `CLEAN_NODE_MODULES=1` bersangiz `node_modules` ham o'chadi |
+| Telegram webhook | Domenli deploy'da webhook shu hostga qayta yo'naltiriladi |
+| Tekshirish | `manage.py check --deploy`, DB nomi + foydalanuvchi soni, `:8000` va nginx orqali HTTP kodlar (to'g'ri `Host` sarlavhasi bilan) |
 
 ## Server holatini yig'ish
 
