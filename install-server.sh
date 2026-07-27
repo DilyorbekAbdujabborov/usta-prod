@@ -102,7 +102,13 @@ ok "Django ready"
 info "[7/9] Building frontend..."
 cd "$INSTALL_DIR/ustalaruz"
 rm -rf node_modules package-lock.json
-npm install 2>&1 | tail -5
+npm install --no-audit --no-fund 2>&1 | tail -5
+# @tailwindcss/oxide native binding workaround (npm optional deps bug)
+if ! node -e "require('@tailwindcss/oxide')" 2>/dev/null; then
+  info "Retrying npm install for native bindings..."
+  rm -rf node_modules package-lock.json
+  npm install --no-audit --no-fund 2>&1 | tail -5
+fi
 npm run build 2>&1
 cd "$INSTALL_DIR"
 ok "Frontend built"
