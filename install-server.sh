@@ -473,6 +473,26 @@ if [ "$IS_IP" = false ]; then
   fi
 fi
 
+# ── Telegram webhook ────────────────────────────────────────────────
+# Telegram keeps one webhook URL per bot token, so moving hosts leaves the
+# payment approve/reject callbacks going to the old deployment with nothing
+# reporting an error. Only over a domain: Telegram refuses plain HTTP, and an
+# IP has no certificate it will accept.
+if [ "$IS_IP" = false ]; then
+  info "Pointing the Telegram webhook at $SERVER..."
+  cd "$INSTALL_DIR/usta-backend"
+  source venv/bin/activate
+  if python manage.py set_telegram_webhook --host "$SERVER" 2>&1; then
+    :
+  else
+    warn "Webhook not updated — payment approve/reject buttons will still hit"
+    warn "the previous host. Re-run once the token and secret are in place:"
+    warn "  cd $INSTALL_DIR/usta-backend && source venv/bin/activate \\"
+    warn "    && python manage.py set_telegram_webhook --host $SERVER"
+  fi
+  cd "$INSTALL_DIR"
+fi
+
 # ── Cleanup ─────────────────────────────────────────────────────────
 # Everything below is a download cache: apt's .deb archive, npm's package
 # tarballs, pip's wheel cache. All of it refills on demand, and on a

@@ -137,3 +137,25 @@ Ishlatilmay qolgan paketlar olib tashlangan: `@google/genai`,
 `express`, `jsonwebtoken`, `web-push`, `react-is`, `@vercel/node`, `autoprefixer`,
 `drizzle-kit`, `esbuild`, `tsx` va ularning `@types/*` fayllari. `db/` papkasi
 mavjud bo'lmagani uchun `drizzle.config.ts` va `db:*` skriptlari ham o'chirildi.
+
+## Telegram webhook
+
+Telegram har bir bot token uchun **bitta** webhook URL saqlaydi. Serverni ko'chirsangiz,
+to'lovni tasdiqlash/rad etish tugmalari eski hostga ketaveradi va hech qayerda xato
+chiqmaydi. `install-server.sh` domenli deploy'da buni avtomatik yangilaydi.
+
+Qo'lda:
+
+```bash
+cd /root/usta_prod/usta-backend && source venv/bin/activate
+
+python manage.py set_telegram_webhook --show            # Telegram hozir qayerga yuboryapti
+python manage.py set_telegram_webhook --host mastergroup.uz
+python manage.py set_telegram_webhook --delete
+```
+
+`TELEGRAM_BOT_TOKEN`, `TELEGRAM_WEBHOOK_PATH` va `TELEGRAM_WEBHOOK_SECRET` `.env` da
+bo'lishi shart. `PATH` — URL ni topib bo'lmaydigan qiladigan tasodifiy segment,
+`SECRET` esa `X-Telegram-Bot-Api-Secret-Token` sarlavhasida tekshiriladi; ikkalasisiz
+webhook faqat 403 qaytaradi. Telegram HTTP ni qabul qilmaydi, shuning uchun faqat
+domen + sertifikat bilan ishlaydi.
