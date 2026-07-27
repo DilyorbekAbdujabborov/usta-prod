@@ -1,0 +1,360 @@
+/* Both font families are loaded once via a <link> in index.html (a render-
+   blocking @import here duplicated Plus Jakarta Sans as a second Google
+   Fonts request - see index.html for why). */
+@import "tailwindcss";
+
+/* Drive `dark:` utilities off the `.dark` class (set by ThemeProvider) instead
+   of the OS `prefers-color-scheme`, so every dark: class stays in sync with
+   the app's own theme toggle. */
+@custom-variant dark (&:where(.dark, .dark *));
+
+@theme {
+  --font-sans: "Plus Jakarta Sans", ui-sans-serif, system-ui, -apple-system, sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, monospace;
+
+  /* ── Semantic surface tokens ── */
+  --color-surface: #ffffff;
+  --color-surface-secondary: #f8fafc;
+  --color-surface-tertiary: #f1f5f9;
+  --color-surface-card: #ffffff;
+  --color-surface-input: #ffffff;
+  --color-surface-sidebar: #ffffff;
+  --color-surface-nav: #ffffff;
+
+  /* ── Semantic text tokens ── */
+  --color-text-primary: #0f172a;
+  --color-text-secondary: #64748b;
+  --color-text-muted: #94a3b8;
+  --color-text-inverse: #ffffff;
+
+  /* ── Semantic border tokens ── */
+  --color-border: #e2e8f0;
+  --color-border-secondary: #cbd5e1;
+
+  /* ── Brand (unchanged across themes) ── */
+  --color-brand: #1d4ed8;
+  --color-brand-hover: #1e40af;
+  --color-brand-light: #dbeafe;
+  --color-brand-text: #ffffff;
+  /* Brand-colored TEXT sitting directly on a neutral surface (header
+     wordmark, outline-button labels) - distinct from --color-brand, which
+     also backs solid buttons and needs to stay dark enough for white text
+     on top of it. #1d4ed8 only hits ~2.6:1 against the dark surface colors
+     below (Lighthouse color-contrast audit), so dark mode gets its own
+     brighter value here instead of lightening --color-brand itself. */
+  --color-brand-fg: #1d4ed8;
+
+  /* ── Auth card elevation ──
+     The login card sits on top of the drifting AmbientBackground blobs, so
+     a single faint shadow just dissolves into them (and into the dark
+     surface, which is only a few points lighter than the page behind it).
+     Three stacked layers instead: a hairline contact shadow, a mid ambient
+     one, and a wide soft cast that actually separates the card from the
+     blob field. Dark mode is handled by a .dark .shadow-auth-card rule
+     further down - a black shadow is invisible on a near-black page, so
+     there it leans on a light top rim instead. */
+  --shadow-auth-card:
+    0 1px 2px rgba(15, 23, 42, 0.05),
+    0 10px 24px -8px rgba(15, 23, 42, 0.13),
+    0 32px 64px -28px rgba(15, 23, 42, 0.22);
+
+  /* ── Danger (logout etc) ── */
+  --color-danger: #ef4444;
+  --color-danger-hover: #dc2626;
+  --color-danger-bg: #fef2f2;
+  --color-danger-border: #fecaca;
+}
+
+/* ── Role accent: approved masters get a teal accent instead of the
+   client-default brand blue, so the in-app shell reads as visibly "usta
+   mode" at a glance (sidebar/nav/buttons all key off --color-brand). ── */
+.role-master {
+  --color-brand: #0d9488;
+  --color-brand-hover: #0f766e;
+  --color-brand-light: #99f6e4;
+}
+
+.dark.role-master {
+  --color-brand-light: #134e4a;
+}
+
+/* ── Dark theme overrides ── */
+.dark {
+  --color-surface: #12161a;
+  --color-surface-secondary: #181c20;
+  --color-surface-tertiary: #1e2328;
+  --color-surface-card: #181c20;
+  --color-surface-input: #1e2328;
+  --color-surface-sidebar: #181c20;
+  --color-surface-nav: #181c20;
+
+  --color-text-primary: #f1f5f9;
+  --color-text-secondary: #94a3b8;
+  --color-text-muted: #64748b;
+  --color-text-inverse: #0f172a;
+
+  --color-border: #1e293b;
+  --color-border-secondary: #334155;
+
+  --color-brand-light: #1e3a5f;
+  --color-brand-fg: #60a5fa;
+
+  --color-danger-bg: #450a0a;
+  --color-danger-border: #7f1d1d;
+}
+
+/* Dark mode gets its own card elevation, written as a real box-shadow rule
+   rather than a --shadow-auth-card override under .dark: Tailwind v4 does
+   NOT compile `shadow-auth-card` to `box-shadow: var(--shadow-auth-card)`,
+   it inlines the @theme value into --tw-shadow at build time. Re-declaring
+   the variable therefore did nothing and the card sat flat on the page. */
+.dark .shadow-auth-card {
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.06),
+    0 2px 4px rgba(0, 0, 0, 0.4),
+    0 16px 32px -12px rgba(0, 0, 0, 0.55),
+    0 40px 72px -32px rgba(0, 0, 0, 0.7);
+}
+
+/* Tailwind v4 registers --tw-shadow-color via `@property` with
+   `inherits: false`, so setting it on an ancestor (.dark) never reaches
+   descendant shadow-sm/md/lg/xl elements - only a rule that matches the
+   element itself wins. Every plain shadow-* utility falls back to ~10%
+   black (correct on light surfaces, nearly invisible on our dark surfaces
+   #12161a/#181c20), so re-declare it per utility scoped under .dark.
+   Opacity is graduated DOWN as blur radius goes UP - the same alpha
+   spread over shadow-xl/2xl's much larger blur area doesn't read as a
+   shadow, it reads as a dark smudge (seen first-hand on the floating
+   trust-badge card, shadow-lg at flat 0.55 looked like a stain). */
+.dark .shadow-xs,
+.dark .shadow-sm {
+  --tw-shadow-color: rgba(0, 0, 0, 0.45);
+}
+.dark .shadow-md {
+  --tw-shadow-color: rgba(0, 0, 0, 0.4);
+}
+.dark .shadow-lg {
+  --tw-shadow-color: rgba(0, 0, 0, 0.32);
+}
+.dark .shadow-xl,
+.dark .shadow-2xl {
+  --tw-shadow-color: rgba(0, 0, 0, 0.28);
+}
+
+/* ── Base theme surface applied at the root ── */
+html,
+body {
+  font-family: var(--font-sans);
+  background-color: var(--color-surface, #ffffff);
+  overflow-x: hidden;
+  scroll-behavior: smooth;
+}
+
+/* ── Fluid theme transitions on colour-bearing properties ── */
+@media (prefers-reduced-motion: no-preference) {
+  *,
+  *::before,
+  *::after {
+    transition-property: background-color, border-color, color, box-shadow;
+    transition-duration: 0.15s;
+    transition-timing-function: ease;
+  }
+
+  .no-theme-transition,
+  .no-theme-transition *,
+  .no-theme-transition *::before,
+  .no-theme-transition *::after {
+    transition: none !important;
+  }
+}
+
+/* Custom glassmorphism utilities */
+.glass-panel {
+  background: rgba(255, 255, 255, 0.95);
+  backdrop-filter: blur(12px);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.dark .glass-panel {
+  background: rgba(22, 28, 36, 0.92);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.dark-glow {
+  box-shadow: 0 0 50px -12px rgba(0, 131, 176, 0.25);
+}
+
+/* ── Focus ring for keyboard navigation ── */
+*:focus-visible {
+  outline: 2px solid var(--color-brand);
+  outline-offset: 2px;
+  border-radius: 8px;
+}
+
+/* ── Autofill override ── */
+input:-webkit-autofill,
+input:-webkit-autofill:hover,
+input:-webkit-autofill:focus,
+input:-webkit-autofill:active {
+  transition: background-color 5000s ease-in-out 0s;
+  -webkit-text-fill-color: var(--color-text-primary) !important;
+  caret-color: var(--color-text-primary);
+}
+
+/* Hide scrollbars but allow scrolling */
+/* ── Reduced motion / accessibility ── */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+/* ── Mobile: tone down spring physics ── */
+@media (pointer: coarse) and (max-width: 640px) {
+  .motion-spring {
+    transition: all 0.15s ease-out !important;
+  }
+}
+
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+
+.no-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+/* ── Backend-unreachable marquee (App.tsx) ── */
+.marquee-track {
+  white-space: nowrap;
+}
+
+.marquee-content {
+  display: inline-flex;
+  gap: 4rem;
+  padding-right: 4rem;
+  animation: marquee-scroll 16s linear infinite;
+  will-change: transform;
+}
+
+@keyframes marquee-scroll {
+  0% { transform: translateX(0); }
+  100% { transform: translateX(-50%); }
+}
+
+/* ── Splash screen (App.tsx bootstrap loading state) ── */
+.splash-pulse-ring {
+  animation: splash-pulse 2s cubic-bezier(0.2, 0.6, 0.4, 1) infinite;
+  will-change: transform, opacity;
+}
+
+.splash-pulse-ring-delayed {
+  animation-delay: 1s;
+}
+
+@keyframes splash-pulse {
+  0% { transform: scale(0.85); opacity: 0.6; }
+  100% { transform: scale(1.6); opacity: 0; }
+}
+
+.splash-dot {
+  animation: splash-dot-bounce 1.2s ease-in-out infinite;
+}
+
+.splash-dot-2 { animation-delay: 0.15s; }
+.splash-dot-3 { animation-delay: 0.3s; }
+
+@keyframes splash-dot-bounce {
+  0%, 80%, 100% { transform: translateY(0); opacity: 0.4; }
+  40% { transform: translateY(-4px); opacity: 1; }
+}
+
+/* ── Ambient background blobs (home hero / auth screens) ──
+   transform+opacity only so the compositor can run this off the main
+   thread with no layout/paint cost per frame - cheap enough for any
+   device. prefers-reduced-motion already freezes all animation-duration
+   to ~0 globally above, so this needs no extra media query of its own. */
+/* ── Face-safe photo crop ──
+   Master photos are user-uploaded portraits shown inside short, wide boxes
+   (the 140x80 home-tab card is the tightest). `object-fit: cover` centred on
+   the middle of the frame cuts the head off exactly when the subject stands
+   in the upper part of the shot, which is how people actually take portraits
+   - the card ends up showing a torso. Biasing the crop upwards keeps the
+   face in frame for both portrait and landscape source images. */
+.avatar-face {
+  object-fit: cover;
+  object-position: 50% 25%;
+}
+
+.ambient-blob-field {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  pointer-events: none;
+  z-index: 0;
+}
+
+.ambient-blob {
+  position: absolute;
+  border-radius: 9999px;
+  filter: blur(60px);
+  opacity: 0.35;
+  will-change: transform;
+}
+
+@media (min-width: 640px) {
+  .ambient-blob {
+    filter: blur(90px);
+  }
+}
+
+.ambient-blob-1 {
+  width: 22rem;
+  height: 22rem;
+  top: -6rem;
+  left: -4rem;
+  background: radial-gradient(circle, #3b82f6 0%, transparent 70%);
+  animation: ambient-drift-1 26s ease-in-out infinite;
+}
+
+.ambient-blob-2 {
+  width: 26rem;
+  height: 26rem;
+  top: 4rem;
+  right: -8rem;
+  background: radial-gradient(circle, #8b5cf6 0%, transparent 70%);
+  animation: ambient-drift-2 32s ease-in-out infinite;
+}
+
+.ambient-blob-3 {
+  width: 20rem;
+  height: 20rem;
+  bottom: -8rem;
+  left: 30%;
+  background: radial-gradient(circle, #10b981 0%, transparent 70%);
+  animation: ambient-drift-3 22s ease-in-out infinite;
+}
+
+.dark .ambient-blob {
+  opacity: 0.22;
+}
+
+@keyframes ambient-drift-1 {
+  0%, 100% { transform: translate(0, 0) scale(1); }
+  50% { transform: translate(3rem, 2rem) scale(1.15); }
+}
+
+@keyframes ambient-drift-2 {
+  0%, 100% { transform: translate(0, 0) scale(1); }
+  50% { transform: translate(-2.5rem, 3rem) scale(1.1); }
+}
+
+@keyframes ambient-drift-3 {
+  0%, 100% { transform: translate(0, 0) scale(1); }
+  50% { transform: translate(2rem, -2rem) scale(1.2); }
+}
+

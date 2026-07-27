@@ -1,0 +1,742 @@
+{
+  "info": {
+    "name": "Ustalar API",
+    "description": "Ustalar.uz — usta xizmatlari platformasi API. Auth: HttpOnly cookie (access_token + refresh_token)",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+    "_exporter_id": "opencode"
+  },
+  "variable": [
+    { "key": "baseUrl", "value": "https://ustalar-sand.vercel.app", "type": "string" },
+    { "key": "accessToken", "value": "", "type": "string" },
+    { "key": "refreshToken", "value": "", "type": "string" }
+  ],
+  "item": [
+    {
+      "name": "Auth",
+      "item": [
+        {
+          "name": "Login",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 200) {",
+                  "  pm.collectionVariables.set('accessToken', pm.cookies.get('access_token'));",
+                  "  pm.collectionVariables.set('refreshToken', pm.cookies.get('refresh_token'));",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"phone\": \"998901234567\",\n  \"password\": \"admin123\"\n}"
+            },
+            "url": { "raw": "{{baseUrl}}/api/auth/login" }
+          },
+          "response": [
+            {
+              "name": "200 OK",
+              "body": "{\n  \"id\": \"uuid\",\n  \"phone\": \"998901234567\",\n  \"name\": \"Admin\",\n  \"role\": \"client\",\n  \"isAdmin\": true,\n  \"balance\": \"0 UZS\",\n  \"completedJobs\": 0,\n  \"isBlocked\": false,\n  \"createdAt\": \"2025-01-01T00:00:00.000Z\"\n}"
+            },
+            {
+              "name": "401 Unauthorized",
+              "body": "{\n  \"error\": \"Telefon raqami yoki parol noto'g'ri\"\n}"
+            }
+          ]
+        },
+        {
+          "name": "Register",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Test User\",\n  \"phone\": \"998901234567\",\n  \"password\": \"parol12345\"\n}"
+            },
+            "url": { "raw": "{{baseUrl}}/api/auth/register" }
+          },
+          "response": [
+            {
+              "name": "201 Created",
+              "body": "{\n  \"id\": \"uuid\",\n  \"phone\": \"998901234567\",\n  \"name\": \"Test User\",\n  \"role\": \"client\",\n  \"isAdmin\": false,\n  \"balance\": \"0 UZS\",\n  \"completedJobs\": 0,\n  \"isBlocked\": false,\n  \"createdAt\": \"2025-01-01T00:00:00.000Z\"\n}"
+            },
+            {
+              "name": "409 Conflict",
+              "body": "{\n  \"error\": \"Bu telefon raqami allaqachon ro'yxatdan o'tgan\"\n}"
+            }
+          ]
+        },
+        {
+          "name": "Logout",
+          "request": {
+            "method": "POST",
+            "url": { "raw": "{{baseUrl}}/api/auth/logout" }
+          },
+          "response": [{ "name": "204 No Content", "body": "" }]
+        },
+        {
+          "name": "Refresh Token",
+          "request": {
+            "method": "POST",
+            "url": { "raw": "{{baseUrl}}/api/auth/refresh" }
+          },
+          "response": [
+            { "name": "200 OK", "body": "{ \"ok\": true }" },
+            { "name": "401 Unauthorized", "body": "{ \"error\": \"Unauthorized\" }" }
+          ]
+        },
+        {
+          "name": "Reset Request (SMS kod)",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"phone\": \"998901234567\"\n}"
+            },
+            "url": { "raw": "{{baseUrl}}/api/auth/reset-request" }
+          },
+          "response": [{ "name": "200 OK", "body": "{ \"ok\": true }" }]
+        },
+        {
+          "name": "Reset Verify (kod bilan)",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"phone\": \"998901234567\",\n  \"code\": \"123456\",\n  \"newPassword\": \"yangiParol123\"\n}"
+            },
+            "url": { "raw": "{{baseUrl}}/api/auth/reset-verify" }
+          },
+          "response": [
+            { "name": "200 OK", "body": "{ \"id\": \"uuid\", \"phone\": \"998901234567\", \"name\": \"Test\", \"role\": \"client\" }" },
+            { "name": "400 Bad Request", "body": "{ \"error\": \"Kod noto'g'ri yoki muddati o'tgan\" }" }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Profile",
+      "item": [
+        {
+          "name": "Get Profile",
+          "request": {
+            "method": "GET",
+            "url": { "raw": "{{baseUrl}}/api/profile/get" }
+          },
+          "response": [
+            {
+              "name": "200 OK",
+              "body": "{\n  \"id\": \"uuid\",\n  \"phone\": \"998901234567\",\n  \"name\": \"Admin\",\n  \"role\": \"client\",\n  \"isAdmin\": true,\n  \"balance\": \"0 UZS\",\n  \"completedJobs\": 0,\n  \"isBlocked\": false,\n  \"createdAt\": \"2025-01-01T00:00:00.000Z\"\n}"
+            }
+          ]
+        },
+        {
+          "name": "Update Profile",
+          "request": {
+            "method": "PATCH",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Yangi Ism\",\n  \"currentPassword\": \"eskiParol\",\n  \"newPassword\": \"yangiParol123\"\n}"
+            },
+            "url": { "raw": "{{baseUrl}}/api/profile/update" }
+          },
+          "response": [
+            { "name": "200 OK", "body": "{ \"id\": \"uuid\", \"phone\": \"998901234567\", \"name\": \"Yangi Ism\", ... }" },
+            { "name": "400", "body": "{ \"error\": \"Joriy parol noto'g'ri\" }" }
+          ]
+        },
+        {
+          "name": "Upload Image (Vercel Blob)",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"filename\": \"avatar.jpg\",\n  \"contentType\": \"image/jpeg\"\n}"
+            },
+            "url": { "raw": "{{baseUrl}}/api/profile/upload" }
+          }
+        },
+        {
+          "name": "Settings - Public",
+          "request": {
+            "method": "GET",
+            "url": { "raw": "{{baseUrl}}/api/profile/settings?public=1" }
+          },
+          "response": [
+            { "name": "200 OK", "body": "{ \"totalUsers\": 150, \"logotypePath\": null }" }
+          ]
+        },
+        {
+          "name": "Settings - Admin Update",
+          "request": {
+            "method": "PATCH",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"premiumMode\": \"active\",\n  \"adminCard\": \"9860 1901 2345 6789\",\n  \"adminCardHolder\": \"Admin Ism\"\n}"
+            },
+            "url": { "raw": "{{baseUrl}}/api/profile/settings" }
+          }
+        },
+        {
+          "name": "Settings - Health Check",
+          "request": {
+            "method": "GET",
+            "url": { "raw": "{{baseUrl}}/api/profile/settings?health=1" }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Masters",
+      "item": [
+        {
+          "name": "Search Masters (filtered)",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/api/masters?category=plumbing&region=Toshkent+viloyati&district=Yangiyoʻl&sortBy=jobs&page=1&limit=20",
+              "query": [
+                { "key": "category", "value": "plumbing", "description": "Kategoriya ID" },
+                { "key": "region", "value": "Toshkent viloyati" },
+                { "key": "district", "value": "Yangiyoʻl" },
+                { "key": "q", "value": "", "description": "Qidiruv so'zi (name, bio, services, specialty)" },
+                { "key": "sortBy", "value": "jobs", "description": "jobs | price | experience" },
+                { "key": "sortDir", "value": "desc", "description": "desc | asc" },
+                { "key": "page", "value": "1" },
+                { "key": "limit", "value": "20" }
+              ]
+            }
+          },
+          "response": [
+            {
+              "name": "200 OK",
+              "body": "[\n  {\n    \"id\": 1,\n    \"userId\": \"uuid\",\n    \"categoryId\": \"plumbing\",\n    \"name\": \"Usta Ism\",\n    \"phone\": \"998901234567\",\n    \"avatarUrl\": null,\n    \"bio\": \"15 yillik tajriba\",\n    \"extraPhone\": null,\n    \"telegram\": \"@usta\",\n    \"specialty\": \"Santexnika\",\n    \"priceComment\": null,\n    \"services\": \"Quvur o'rnatish, remont\",\n    \"rating\": 4.8,\n    \"reviewsCount\": 23,\n    \"experience\": 10,\n    \"price\": 150000,\n    \"region\": \"Toshkent viloyati\",\n    \"district\": \"Yangiyoʻl\",\n    \"isActive\": true,\n    \"isOnline\": true,\n    \"verified\": true,\n    \"completedJobs\": 45,\n    \"monthlyEarnings\": 0,\n    \"premiumUntil\": null,\n    \"createdAt\": \"2025-01-01T00:00:00.000Z\"\n  }\n]"
+            }
+          ]
+        },
+        {
+          "name": "Get Master By ID",
+          "request": {
+            "method": "GET",
+            "url": { "raw": "{{baseUrl}}/api/masters?id=1", "query": [{ "key": "id", "value": "1" }] }
+          },
+          "response": [
+            { "name": "200 OK", "body": "{ \"id\": 1, \"name\": \"Usta Ism\", ... }" },
+            { "name": "404", "body": "{ \"error\": \"Topilmadi\" }" }
+          ]
+        },
+        {
+          "name": "Create Master (Admin)",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"categoryId\": \"plumbing\",\n  \"name\": \"Yangi Usta\",\n  \"phone\": \"998901234567\",\n  \"region\": \"Toshkent viloyati\",\n  \"district\": \"Yangiyoʻl\",\n  \"experience\": 5,\n  \"price\": 100000,\n  \"bio\": \"Tajribali usta\",\n  \"services\": \"Santexnika, quvur\"\n}"
+            },
+            "url": { "raw": "{{baseUrl}}/api/masters" }
+          },
+          "response": [
+            { "name": "201 Created", "body": "{ \"id\": 2, \"name\": \"Yangi Usta\", ... }" },
+            { "name": "400", "body": "{ \"error\": \"Majburiy maydonlar to'ldirilmagan\" }" }
+          ]
+        },
+        {
+          "name": "Update Master",
+          "request": {
+            "method": "PATCH",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"price\": 200000,\n  \"isActive\": false,\n  \"bio\": \"Yangilangan ma'lumot\"\n}"
+            },
+            "url": { "raw": "{{baseUrl}}/api/masters?id=1", "query": [{ "key": "id", "value": "1" }] }
+          },
+          "response": [
+            { "name": "200 OK", "body": "{ \"id\": 1, \"price\": 200000, \"isActive\": false, ... }" },
+            { "name": "403", "body": "{ \"error\": \"Ruxsat yo'q\" }" }
+          ]
+        },
+        {
+          "name": "Rate Master",
+          "request": {
+            "method": "PATCH",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{ \"addRating\": 5 }" },
+            "url": { "raw": "{{baseUrl}}/api/masters?id=1", "query": [{ "key": "id", "value": "1" }] }
+          },
+          "response": [
+            { "name": "200 OK", "body": "{ \"id\": 1, \"rating\": 4.9, \"reviewsCount\": 24, ... }" },
+            { "name": "400", "body": "{ \"error\": \"Baho 1 dan 5 gacha bo'lishi kerak\" }" }
+          ]
+        },
+        {
+          "name": "Delete Master (Admin)",
+          "request": {
+            "method": "DELETE",
+            "url": { "raw": "{{baseUrl}}/api/masters?id=1", "query": [{ "key": "id", "value": "1" }] }
+          },
+          "response": [
+            { "name": "204 No Content", "body": "" },
+            { "name": "409", "body": "{ \"error\": \"Ushbu ustaga bog'liq buyurtmalar yoki to'lovlar mavjud, o'chirib bo'lmadi\" }" }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Orders",
+      "item": [
+        {
+          "name": "Get Orders",
+          "request": {
+            "method": "GET",
+            "url": { "raw": "{{baseUrl}}/api/orders" }
+          },
+          "response": [
+            {
+              "name": "200 OK",
+              "body": "[\n  {\n    \"id\": \"uuid\",\n    \"clientId\": \"uuid\",\n    \"masterId\": 1,\n    \"title\": \"Santexnika ishlari\",\n    \"categoryId\": \"plumbing\",\n    \"budget\": 200000,\n    \"region\": \"Toshkent\",\n    \"district\": \"Chilonzor\",\n    \"desc\": \"Trubani tuzatish\",\n    \"status\": \"pending\",\n    \"createdAt\": \"2025-01-01T00:00:00.000Z\",\n    \"clientName\": \"Mijoz Ism\",\n    \"clientPhone\": \"998901234567\"\n  }\n]"
+            }
+          ]
+        },
+        {
+          "name": "Create Order",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"title\": \"Santexnika ishlari\",\n  \"categoryId\": \"plumbing\",\n  \"budget\": 200000,\n  \"region\": \"Toshkent\",\n  \"district\": \"Chilonzor\",\n  \"desc\": \"Truba tuzatish kerak\"\n}"
+            },
+            "url": { "raw": "{{baseUrl}}/api/orders" }
+          },
+          "response": [
+            {
+              "name": "201 Created",
+              "body": "{ \"id\": \"uuid\", \"title\": \"Santexnika ishlari\", \"status\": \"pending\", ... }"
+            }
+          ]
+        },
+        {
+          "name": "Update Order",
+          "request": {
+            "method": "PATCH",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"status\": \"in_progress\",\n  \"masterId\": 1\n}"
+            },
+            "url": { "raw": "{{baseUrl}}/api/orders?id=order_uuid", "query": [{ "key": "id", "value": "order_uuid" }] }
+          },
+          "response": [{ "name": "200 OK", "body": "{ \"id\": \"uuid\", \"status\": \"in_progress\", ... }" }]
+        },
+        {
+          "name": "Delete Order",
+          "request": {
+            "method": "DELETE",
+            "url": { "raw": "{{baseUrl}}/api/orders?id=order_uuid", "query": [{ "key": "id", "value": "order_uuid" }] }
+          },
+          "response": [{ "name": "204 No Content", "body": "" }]
+        }
+      ]
+    },
+    {
+      "name": "Applications (Hamkorlik)",
+      "item": [
+        {
+          "name": "List Applications",
+          "request": { "method": "GET", "url": { "raw": "{{baseUrl}}/api/applications/list" } }
+        },
+        {
+          "name": "Create Application",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"firstName\": \"Usta\",\n  \"lastName\": \"Ism\",\n  \"phone\": \"998901234567\",\n  \"categoryId\": \"plumbing\",\n  \"region\": \"Toshkent viloyati\",\n  \"district\": \"Yangiyoʻl\",\n  \"experience\": 5,\n  \"price\": 150000,\n  \"bio\": \"Tajribali usta\",\n  \"services\": \"Santexnika\"\n}"
+            },
+            "url": { "raw": "{{baseUrl}}/api/applications/create" }
+          },
+          "response": [{ "name": "201 Created", "body": "{ \"id\": 1, \"status\": \"pending\", ... }" }]
+        },
+        {
+          "name": "Check Status",
+          "request": { "method": "GET", "url": { "raw": "{{baseUrl}}/api/applications/status" } }
+        },
+        {
+          "name": "Approve Application (Admin)",
+          "request": {
+            "method": "PATCH",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{ \"status\": \"approved\" }" },
+            "url": { "raw": "{{baseUrl}}/api/applications/approve?id=1", "query": [{ "key": "id", "value": "1" }] }
+          }
+        },
+        {
+          "name": "Decline Application (Admin)",
+          "request": {
+            "method": "PATCH",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{ \"status\": \"declined\" }" },
+            "url": { "raw": "{{baseUrl}}/api/applications/decline?id=1", "query": [{ "key": "id", "value": "1" }] }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Clients (Admin)",
+      "item": [
+        {
+          "name": "Get Clients",
+          "request": { "method": "GET", "url": { "raw": "{{baseUrl}}/api/clients" } },
+          "response": [
+            {
+              "name": "200 OK",
+              "body": "[\n  {\n    \"id\": \"uuid\",\n    \"name\": \"Mijoz\",\n    \"phone\": \"998901234567\",\n    \"isBlocked\": false,\n    \"createdAt\": \"2025-01-01T00:00:00.000Z\",\n    \"completedOrdersCount\": 5\n  }\n]"
+            }
+          ]
+        },
+        {
+          "name": "Toggle Block Client",
+          "request": {
+            "method": "PATCH",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{ \"isBlocked\": true }" },
+            "url": { "raw": "{{baseUrl}}/api/clients?id=uuid", "query": [{ "key": "id", "value": "uuid" }] }
+          },
+          "response": [{ "name": "200 OK", "body": "{ \"id\": \"uuid\", \"isBlocked\": true, ... }" }]
+        },
+        {
+          "name": "Delete Client",
+          "request": {
+            "method": "DELETE",
+            "url": { "raw": "{{baseUrl}}/api/clients?id=uuid", "query": [{ "key": "id", "value": "uuid" }] }
+          },
+          "response": [{ "name": "204 No Content", "body": "" }]
+        }
+      ]
+    },
+    {
+      "name": "Messages (Chat + Tickets)",
+      "item": [
+        {
+          "name": "Get Conversations",
+          "request": { "method": "GET", "url": { "raw": "{{baseUrl}}/api/messages/conversations" } },
+          "response": [
+            {
+              "name": "200 OK",
+              "body": "[\n  {\n    \"id\": 1,\n    \"viewerRole\": \"client\",\n    \"partner\": { \"id\": 1, \"name\": \"Usta\", \"avatar\": null, \"phone\": \"998901234567\", \"categoryId\": \"plumbing\" },\n    \"messages\": [\n      { \"sender\": \"client\", \"text\": \"Salom\", \"time\": \"2025-01-01T12:00:00Z\" },\n      { \"sender\": \"master\", \"text\": \"Assalomu alaykum\", \"time\": \"2025-01-01T12:05:00Z\" }\n    ],\n    \"unreadCount\": 1\n  }\n]"
+            }
+          ]
+        },
+        {
+          "name": "Send Message to Master",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\n  \"masterId\": 1,\n  \"text\": \"Ishga tayyormisiz?\"\n}" },
+            "url": { "raw": "{{baseUrl}}/api/messages/conversations" }
+          },
+          "response": [
+            {
+              "name": "201 Created",
+              "body": "{\n  \"conversationId\": 1,\n  \"message\": { \"sender\": \"client\", \"text\": \"Ishga tayyormisiz?\", \"time\": \"2025-01-01T12:00:00Z\" }\n}"
+            }
+          ]
+        },
+        {
+          "name": "Send Message to Client (Master)",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\n  \"clientId\": \"client_uuid\",\n  \"text\": \"Ha tayyorman\"\n}" },
+            "url": { "raw": "{{baseUrl}}/api/messages/conversations" }
+          }
+        },
+        {
+          "name": "Mark Conversation Read",
+          "request": {
+            "method": "PATCH",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{ \"read\": true }" },
+            "url": { "raw": "{{baseUrl}}/api/messages/conversations?id=1", "query": [{ "key": "id", "value": "1" }] }
+          }
+        },
+        {
+          "name": "Get Tickets",
+          "request": { "method": "GET", "url": { "raw": "{{baseUrl}}/api/messages/tickets" } },
+          "response": [
+            {
+              "name": "200 OK",
+              "body": "[\n  {\n    \"id\": \"uuid\",\n    \"userId\": \"uuid\",\n    \"userName\": \"Mijoz\",\n    \"userRole\": \"Mijoz\",\n    \"status\": \"open\",\n    \"createdAt\": \"2025-01-01T00:00:00.000Z\",\n    \"messages\": [\n      { \"id\": 1, \"ticketId\": \"uuid\", \"sender\": \"user\", \"text\": \"Yordam kerak\", \"createdAt\": \"...\" }\n    ]\n  }\n]"
+            }
+          ]
+        },
+        {
+          "name": "Create Ticket / Send Message",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\n  \"message\": \"Yordam bering\"\n}" },
+            "url": { "raw": "{{baseUrl}}/api/messages/tickets" }
+          },
+          "response": [{ "name": "201 Created", "body": "{ \"id\": \"uuid\", \"messages\": [...], ... }" }]
+        },
+        {
+          "name": "Reply Ticket (Admin)",
+          "request": {
+            "method": "PATCH",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\n  \"message\": \"Yordam beramiz\"\n}" },
+            "url": { "raw": "{{baseUrl}}/api/messages/tickets?id=ticket_uuid", "query": [{ "key": "id", "value": "ticket_uuid" }] }
+          },
+          "response": [{ "name": "200 OK", "body": "{ \"id\": \"uuid\", \"messages\": [...], ... }" }]
+        },
+        {
+          "name": "Resolve Ticket (Admin)",
+          "request": {
+            "method": "PATCH",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{ \"status\": \"resolved\" }" },
+            "url": { "raw": "{{baseUrl}}/api/messages/tickets?id=ticket_uuid", "query": [{ "key": "id", "value": "ticket_uuid" }] }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Payments",
+      "item": [
+        {
+          "name": "Get Payments",
+          "request": { "method": "GET", "url": { "raw": "{{baseUrl}}/api/payments" } },
+          "response": [
+            {
+              "name": "200 OK",
+              "body": "[\n  {\n    \"id\": 1,\n    \"masterId\": 1,\n    \"packageId\": \"premium\",\n    \"amount\": 50000,\n    \"status\": \"pending\",\n    \"receiptText\": \"To'lov qildim\",\n    \"proofImageUrl\": null,\n    \"createdAt\": \"2025-01-01T00:00:00.000Z\"\n  }\n]"
+            }
+          ]
+        },
+        {
+          "name": "Create Payment",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"packageId\": \"premium\",\n  \"amount\": 50000,\n  \"receiptText\": \"Humo orqali to'ladim\",\n  \"proofImageUrl\": null\n}"
+            },
+            "url": { "raw": "{{baseUrl}}/api/payments" }
+          },
+          "response": [{ "name": "201 Created", "body": "{ \"id\": 1, \"status\": \"pending\", ... }" }]
+        },
+        {
+          "name": "Review Payment (Admin)",
+          "request": {
+            "method": "PATCH",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{ \"status\": \"approved\" }" },
+            "url": { "raw": "{{baseUrl}}/api/payments?id=1", "query": [{ "key": "id", "value": "1" }] }
+          },
+          "response": [{ "name": "200 OK", "body": "{ \"id\": 1, \"status\": \"approved\", ... }" }]
+        }
+      ]
+    },
+    {
+      "name": "Marketplace (Ads + Tariffs)",
+      "item": [
+        {
+          "name": "Get Ads",
+          "request": { "method": "GET", "url": { "raw": "{{baseUrl}}/api/marketplace/ads" } },
+          "response": [
+            {
+              "name": "200 OK",
+              "body": "[\n  {\n    \"id\": \"uuid\",\n    \"title\": \"50% chegirma!\",\n    \"discount\": \"50%\",\n    \"code\": \"USTA50\",\n    \"bgGradient\": \"from-purple-600 to-pink-500\"\n  }\n]"
+            }
+          ]
+        },
+        {
+          "name": "Create Ad (Admin)",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"title\": \"Yangi yil aksiyasi!\",\n  \"discount\": \"20%\",\n  \"code\": \"YANGI2025\",\n  \"bgGradient\": \"from-blue-600 to-cyan-500\"\n}"
+            },
+            "url": { "raw": "{{baseUrl}}/api/marketplace/ads" }
+          }
+        },
+        {
+          "name": "Delete Ad (Admin)",
+          "request": {
+            "method": "DELETE",
+            "url": { "raw": "{{baseUrl}}/api/marketplace/ads?id=ad_uuid", "query": [{ "key": "id", "value": "ad_uuid" }] }
+          },
+          "response": [{ "name": "204 No Content", "body": "" }]
+        },
+        {
+          "name": "Get Tariffs",
+          "request": { "method": "GET", "url": { "raw": "{{baseUrl}}/api/marketplace/tariffs" } },
+          "response": [
+            {
+              "name": "200 OK",
+              "body": "[\n  {\n    \"id\": \"premium\",\n    \"name\": \"Premium 1 oy\",\n    \"price\": 50000,\n    \"months\": 1,\n    \"comment\": null\n  }\n]"
+            }
+          ]
+        },
+        {
+          "name": "Create Tariff (Admin)",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"id\": \"premium_3mo\",\n  \"name\": \"Premium 3 oy\",\n  \"price\": 120000,\n  \"months\": 3\n}"
+            },
+            "url": { "raw": "{{baseUrl}}/api/marketplace/tariffs" }
+          }
+        },
+        {
+          "name": "Update Tariff (Admin)",
+          "request": {
+            "method": "PATCH",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{ \"price\": 55000 }" },
+            "url": { "raw": "{{baseUrl}}/api/marketplace/tariffs?id=premium", "query": [{ "key": "id", "value": "premium" }] }
+          }
+        },
+        {
+          "name": "Delete Tariff (Admin)",
+          "request": {
+            "method": "DELETE",
+            "url": { "raw": "{{baseUrl}}/api/marketplace/tariffs?id=premium", "query": [{ "key": "id", "value": "premium" }] }
+          },
+          "response": [{ "name": "204 No Content", "body": "" }]
+        }
+      ]
+    },
+    {
+      "name": "Clients (Admin)",
+      "item": [
+        {
+          "name": "Get Clients",
+          "request": { "method": "GET", "url": { "raw": "{{baseUrl}}/api/clients" } },
+          "response": [
+            {
+              "name": "200 OK",
+              "body": "[\n  {\n    \"id\": \"uuid\",\n    \"name\": \"Mijoz\",\n    \"phone\": \"998901234567\",\n    \"isBlocked\": false,\n    \"createdAt\": \"2025-01-01T00:00:00.000Z\",\n    \"completedOrdersCount\": 5\n  }\n]"
+            }
+          ]
+        },
+        {
+          "name": "Toggle Block Client",
+          "request": {
+            "method": "PATCH",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{ \"isBlocked\": true }" },
+            "url": { "raw": "{{baseUrl}}/api/clients?id=uuid", "query": [{ "key": "id", "value": "uuid" }] }
+          },
+          "response": [{ "name": "200 OK", "body": "{ \"id\": \"uuid\", \"isBlocked\": true, ... }" }]
+        },
+        {
+          "name": "Delete Client",
+          "request": {
+            "method": "DELETE",
+            "url": { "raw": "{{baseUrl}}/api/clients?id=uuid", "query": [{ "key": "id", "value": "uuid" }] }
+          },
+          "response": [{ "name": "204 No Content", "body": "" }]
+        }
+      ]
+    },
+    {
+      "name": "Payments",
+      "item": [
+        {
+          "name": "Get Payments",
+          "request": { "method": "GET", "url": { "raw": "{{baseUrl}}/api/payments" } },
+          "response": [
+            {
+              "name": "200 OK",
+              "body": "[\n  {\n    \"id\": 1,\n    \"masterId\": 1,\n    \"packageId\": \"premium\",\n    \"amount\": 50000,\n    \"status\": \"pending\",\n    \"receiptText\": \"To'lov qildim\",\n    \"proofImageUrl\": null,\n    \"createdAt\": \"2025-01-01T00:00:00.000Z\"\n  }\n]"
+            }
+          ]
+        },
+        {
+          "name": "Create Payment",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"packageId\": \"premium\",\n  \"amount\": 50000,\n  \"receiptText\": \"Humo orqali to'ladim\",\n  \"proofImageUrl\": null\n}"
+            },
+            "url": { "raw": "{{baseUrl}}/api/payments" }
+          },
+          "response": [{ "name": "201 Created", "body": "{ \"id\": 1, \"status\": \"pending\", ... }" }]
+        },
+        {
+          "name": "Review Payment (Admin)",
+          "request": {
+            "method": "PATCH",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{ \"status\": \"approved\" }" },
+            "url": { "raw": "{{baseUrl}}/api/payments?id=1", "query": [{ "key": "id", "value": "1" }] }
+          },
+          "response": [{ "name": "200 OK", "body": "{ \"id\": 1, \"status\": \"approved\", ... }" }]
+        }
+      ]
+    },
+    {
+      "name": "Push Notifications",
+      "item": [
+        {
+          "name": "Register Push Subscription",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"endpoint\": \"https://fcm.googleapis.com/...\",\n  \"p256dh\": \"base64_encoded_key\",\n  \"auth\": \"base64_encoded_auth\"\n}"
+            },
+            "url": { "raw": "{{baseUrl}}/api/push/register" }
+          },
+          "response": [{ "name": "201 Created", "body": "{ \"ok\": true }" }]
+        },
+        {
+          "name": "Unregister Push Subscription",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{ \"endpoint\": \"https://fcm.googleapis.com/...\" }" },
+            "url": { "raw": "{{baseUrl}}/api/push/unregister" }
+          },
+          "response": [{ "name": "200 OK", "body": "{ \"ok\": true }" }]
+        },
+        {
+          "name": "Send Push Notification (Admin)",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"userId\": \"target_user_uuid\",\n  \"title\": \"Yangi xabar\",\n  \"body\": \"Sizga yangi buyurtma keldi\",\n  \"url\": \"/orders\"\n}"
+            },
+            "url": { "raw": "{{baseUrl}}/api/push/send" }
+          },
+          "response": [{ "name": "200 OK", "body": "{ \"ok\": true, \"sent\": 1 }" }]
+        }
+      ]
+    }
+  ]
+}

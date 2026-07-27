@@ -1,0 +1,115 @@
+{
+  "schemaVersion": 2,
+  "generatedAt": "2026-07-24T00:00:00Z",
+  "title": "Design System: Usta",
+  "extensions": {
+    "colorMeta": {
+      "brand": {
+        "role": "primary",
+        "displayName": "Usta Blue",
+        "canonical": "#1d4ed8",
+        "tonalRamp": ["#eff6ff", "#dbeafe", "#bfdbfe", "#93c5fd", "#60a5fa", "#3b82f6", "#2563eb", "#1d4ed8", "#1e40af", "#1e3a8a"]
+      },
+      "brand-master": {
+        "role": "primary",
+        "displayName": "Verified Teal",
+        "canonical": "#0d9488",
+        "tonalRamp": ["#f0fdfa", "#ccfbf1", "#99f6e4", "#5eead4", "#2dd4bf", "#14b8a6", "#0d9488", "#0f766e", "#115e59", "#134e4a"]
+      },
+      "text-primary": {
+        "role": "neutral",
+        "displayName": "Slate Ink",
+        "canonical": "#0f172a",
+        "tonalRamp": ["#f8fafc", "#f1f5f9", "#e2e8f0", "#cbd5e1", "#94a3b8", "#64748b", "#475569", "#334155", "#1e293b", "#0f172a"]
+      }
+    },
+    "typographyMeta": {
+      "body": { "displayName": "Body", "purpose": "Message content and readable prose - 13-14px, a step above the app's dense chrome default." },
+      "label": { "displayName": "Label", "purpose": "Nav, meta, chrome - the app's native dense 9-11px scale." },
+      "mono": { "displayName": "Mono", "purpose": "Transactional numbers only: amounts, phone numbers, IDs." }
+    },
+    "shadows": [
+      { "name": "overlay", "value": "0 10px 15px -3px rgba(0,0,0,0.1), 0 4px 6px -4px rgba(0,0,0,0.1)", "purpose": "The chat overlay panel floating above the app shell. Never used on resting cards/bubbles." }
+    ],
+    "motion": [
+      { "name": "ease-out-quart", "value": "cubic-bezier(0.25, 1, 0.5, 1)", "purpose": "Overlay enter/exit, message bubble entrance." }
+    ],
+    "breakpoints": [
+      { "name": "sm", "value": "640px" },
+      { "name": "lg", "value": "1024px" }
+    ]
+  },
+  "components": [
+    {
+      "name": "Message Bubble - Outgoing",
+      "kind": "custom",
+      "refersTo": "bubble-outgoing",
+      "description": "The current user's own sent message, right-aligned, role-tinted background.",
+      "html": "<div class=\"ds-bubble ds-bubble-out\"><p>Ertaga soat 10 da kelaman, manzilni yuboring.</p><span class=\"ds-bubble-meta\">14:32 <svg class=\"ds-check\" viewBox=\"0 0 16 16\" fill=\"none\"><path d=\"M3 8l3 3 7-7\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"/></svg></span></div>",
+      "css": ".ds-bubble { max-width: 80%; padding: 10px; border-radius: 16px; font-size: 13px; font-weight: 700; line-height: 1.5; position: relative; display: flex; flex-direction: column; gap: 4px; } .ds-bubble-out { background: #dbeafe; color: #0f172a; align-self: flex-end; border-top-right-radius: 4px; } .ds-bubble-meta { display: flex; align-items: center; gap: 3px; align-self: flex-end; opacity: 0.6; font-size: 9px; font-weight: 600; } .ds-check { width: 11px; height: 11px; color: #1d4ed8; }"
+    },
+    {
+      "name": "Message Bubble - Incoming",
+      "kind": "custom",
+      "refersTo": "bubble-incoming",
+      "description": "The other participant's message, left-aligned, neutral background.",
+      "html": "<div class=\"ds-bubble ds-bubble-in\"><p>Xop, manzil: Chilonzor 5-kvartal, 12-uy</p><span class=\"ds-bubble-meta\">14:35</span></div>",
+      "css": ".ds-bubble { max-width: 80%; padding: 10px; border-radius: 16px; font-size: 13px; font-weight: 700; line-height: 1.5; display: flex; flex-direction: column; gap: 4px; } .ds-bubble-in { background: #f1f5f9; color: #0f172a; align-self: flex-start; border-top-left-radius: 4px; } .ds-bubble-meta { font-size: 9px; font-weight: 600; opacity: 0.6; }"
+    },
+    {
+      "name": "Message Bubble - Pending",
+      "kind": "custom",
+      "refersTo": "bubble-outgoing",
+      "description": "Optimistically-sent message awaiting server confirmation - dimmed, clock glyph instead of checkmark, text stays fully readable.",
+      "html": "<div class=\"ds-bubble ds-bubble-out ds-bubble-pending\"><p>Manzilni yubordim, kutyapman</p><span class=\"ds-bubble-meta\"><svg class=\"ds-clock\" viewBox=\"0 0 16 16\" fill=\"none\"><circle cx=\"8\" cy=\"8\" r=\"6\" stroke=\"currentColor\" stroke-width=\"1.5\"/><path d=\"M8 5v3l2 1.5\" stroke=\"currentColor\" stroke-width=\"1.5\" stroke-linecap=\"round\"/></svg></span></div>",
+      "css": ".ds-bubble-pending { opacity: 0.7; } .ds-clock { width: 11px; height: 11px; color: #f59e0b; animation: ds-pulse 1.4s ease-in-out infinite; } @keyframes ds-pulse { 0%,100% { opacity: 1; } 50% { opacity: 0.4; } }"
+    },
+    {
+      "name": "Chat Composer",
+      "kind": "input",
+      "refersTo": "input-composer",
+      "description": "Pill-shaped message input, the one deliberate departure from the app's default 12px input radius.",
+      "html": "<form class=\"ds-composer\"><input class=\"ds-composer-input\" placeholder=\"Xabar yozing...\" /><button class=\"ds-composer-send\" type=\"submit\" aria-label=\"Yuborish\"><svg viewBox=\"0 0 20 20\" fill=\"none\"><path d=\"M3 10h13m0 0l-5-5m5 5l-5 5\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"/></svg></button></form>",
+      "css": ".ds-composer { display: flex; align-items: center; gap: 8px; background: #ffffff; border: 1px solid #e2e8f0; border-radius: 9999px; padding: 6px 6px 6px 16px; } .ds-composer-input { flex: 1; border: none; outline: none; font-size: 13px; font-weight: 700; background: transparent; color: #0f172a; } .ds-composer-input::placeholder { color: #64748b; } .ds-composer-send { width: 36px; height: 36px; border-radius: 9999px; background: #1d4ed8; color: #ffffff; display: flex; align-items: center; justify-content: center; border: none; cursor: pointer; transition: background 0.15s ease; } .ds-composer-send:hover { background: #1e40af; } .ds-composer-send:focus-visible { outline: 2px solid #1d4ed8; outline-offset: 2px; }"
+    },
+    {
+      "name": "Conversation List Row",
+      "kind": "custom",
+      "refersTo": "nav-item",
+      "description": "A single conversation entry in the chat list - partner name, last message preview, unread badge.",
+      "html": "<button class=\"ds-conv-row\"><div class=\"ds-conv-avatar\">AS</div><div class=\"ds-conv-body\"><span class=\"ds-conv-name\">Akmal Saidov</span><span class=\"ds-conv-preview\">Ertaga soat 10 da kelaman...</span></div><span class=\"ds-conv-badge\">2</span></button>",
+      "css": ".ds-conv-row { display: flex; align-items: center; gap: 10px; width: 100%; padding: 10px 12px; border: none; background: transparent; text-align: left; cursor: pointer; border-radius: 12px; transition: background 0.15s ease; } .ds-conv-row:hover { background: #f8fafc; } .ds-conv-avatar { width: 40px; height: 40px; border-radius: 9999px; background: #dbeafe; color: #1d4ed8; display: flex; align-items: center; justify-content: center; font-weight: 900; font-size: 12px; flex-shrink: 0; } .ds-conv-body { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; } .ds-conv-name { font-size: 11px; font-weight: 900; color: #0f172a; } .ds-conv-preview { font-size: 10px; font-weight: 600; color: #64748b; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; } .ds-conv-badge { min-width: 18px; height: 18px; border-radius: 9999px; background: #ef4444; color: #ffffff; font-size: 10px; font-weight: 900; display: flex; align-items: center; justify-content: center; padding: 0 5px; flex-shrink: 0; }"
+    }
+  ],
+  "narrative": {
+    "northStar": "The Trusted Workbench",
+    "overview": "Usta is where two people - a client and a verified tradesperson - coordinate real work over real money. The interface earns trust the way a well-organized workshop does: nothing decorative, everything legible, every status (paid, pending, verified, unread) visible at a glance without hunting. Density is high by default (the app's list rows and labels run 9-11px, font-weight 900) but never at the cost of the content the user actually came to read. The system explicitly rejects generic consumer-messenger chrome: no playful bubble tails, no reaction rails, no social-app decoration. It rejects gradient text, glass panels as default surface treatment, and soft ambient card shadows on functional UI. Role is structural, not cosmetic: masters operate under a teal accent, clients under brand blue, set once at the shell level and inherited everywhere.",
+    "keyCharacteristics": [
+      "Dense, high-weight micro-typography for chrome contrasted against a slightly larger, calmer type size for actual message content.",
+      "Flat by default; shadows are rare, shallow, and reserved for genuinely floating elements.",
+      "One accent color per role, used sparingly - never as the dominant surface color.",
+      "Status is always color + text + icon together, never color alone."
+    ],
+    "rules": [
+      { "name": "The One Accent Rule", "body": "Exactly one accent color is visible on screen at a time, determined by role.", "section": "colors" },
+      { "name": "The Status-Never-Alone Rule", "body": "Payment/message status is always color + icon + label together.", "section": "colors" },
+      { "name": "The Content-Gets-Air Rule", "body": "Chrome stays at the app's native dense 9-11px scale; content the user is meant to read steps up to 13-14px.", "section": "typography" },
+      { "name": "The Flat-Rest Rule", "body": "Nothing at rest carries a shadow. Depth comes from a background-color step, not box-shadow.", "section": "elevation" }
+    ],
+    "dos": [
+      "Do use exactly one accent color per screen, chosen by role.",
+      "Do keep chat message content at 13-14px even though the rest of the app's chrome runs 9-11px.",
+      "Do show pending/sent/read status as color + icon + label together.",
+      "Do keep bubbles flat - depth comes from the color step, not elevation.",
+      "Do use the directional squared-corner notch to indicate sender, not a speech-bubble tail."
+    ],
+    "donts": [
+      "Don't build anything that reads as a WhatsApp/Telegram/Instagram-DM clone.",
+      "Don't use border-left/border-right colored stripes as a status indicator.",
+      "Don't apply box-shadow to any bubble, card, or row at rest.",
+      "Don't mix role accent colors on one screen.",
+      "Don't use a spinner that covers message text for the pending state.",
+      "Don't drop below 4.5:1 text contrast anywhere, including placeholder and meta/timestamp text."
+    ]
+  }
+}

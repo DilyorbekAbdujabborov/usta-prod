@@ -1,0 +1,12 @@
+[
+  {
+    "relation": ["delegate_permission/common.handle_all_urls"],
+    "target": {
+      "namespace": "android_app",
+      "package_name": "app.vercel.ustalar_sand.twa",
+      "sha256_cert_fingerprints": [
+        "3F:F9:01:14:D0:29:23:16:9E:D7:62:A8:48:52:EF:72:55:0F:69:E6:8B:F4:45:E0:65:17:38:2D:F1:F5:74:62"
+      ]
+    }
+  }
+]

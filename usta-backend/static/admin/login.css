@@ -1,0 +1,27 @@
+.login-box {
+    width: 400px;
+}
+
+.login-logo {
+    margin-bottom: 0;
+    padding: 20px 0 10px;
+}
+
+.login-logo img,
+.login-logo .logo-light,
+.login-logo .logo-dark {
+    max-height: 60px;
+    width: auto;
+    object-fit: contain;
+}
+
+.login-card-body {
+    padding: 20px 30px;
+}
+
+.login-page {
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}

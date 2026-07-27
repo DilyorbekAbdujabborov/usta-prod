@@ -1,0 +1,36 @@
+# Python
+venv/
+__pycache__/
+*.pyc
+*.pyo
+*.egg-info/
+dist/
+build/
+*.egg
+
+# Django
+staticfiles/
+media/
+db.sqlite3
+logs/
+*.log
+gunicorn.pid
+
+# Environment
+.env
+!.env.example
+.env.prod
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Project
+*.pid
+*.sock

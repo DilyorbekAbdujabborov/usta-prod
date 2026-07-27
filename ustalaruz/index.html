@@ -1,0 +1,181 @@
+<!doctype html>
+<html lang="uz">
+	<head>
+		<meta charset="UTF-8" />
+		<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
+		<!-- Google tag (gtag.js) - consent-gated.
+		     gtag.js is NOT requested on load. Consent Mode v2 starts fully
+		     denied and the library is only injected once the visitor accepts
+		     the cookie/analytics banner (src/components/ConsentBanner.tsx via
+		     src/lib/consent.ts), so a visitor who declines never touches a
+		     Google endpoint at all. A stored "granted" replays immediately
+		     below so returning visitors are not asked twice. -->
+		<script>
+			window.dataLayer = window.dataLayer || [];
+			function gtag(){dataLayer.push(arguments);}
+
+			gtag('consent', 'default', {
+				ad_storage: 'denied',
+				ad_user_data: 'denied',
+				ad_personalization: 'denied',
+				analytics_storage: 'denied',
+				functionality_storage: 'granted',
+				security_storage: 'granted'
+			});
+			gtag('js', new Date());
+
+			window.__ustaLoadAnalytics = function () {
+				if (window.__ustaAnalyticsLoaded) return;
+				window.__ustaAnalyticsLoaded = true;
+				gtag('consent', 'update', { analytics_storage: 'granted' });
+				var s = document.createElement('script');
+				s.async = true;
+				s.src = 'https://www.googletagmanager.com/gtag/js?id=G-LHL98HDB3J';
+				document.head.appendChild(s);
+				gtag('config', 'G-LHL98HDB3J');
+			};
+
+			window.__ustaDenyAnalytics = function () {
+				gtag('consent', 'update', { analytics_storage: 'denied' });
+			};
+
+			try {
+				if (localStorage.getItem('usta_consent_v1') === 'granted') {
+					window.__ustaLoadAnalytics();
+				}
+			} catch (e) {}
+		</script>
+		<title>Master Group – Uyingiz uchun professional ustalarni toping</title>
+		<meta
+			name="description"
+			content="O'zbekistondagi eng ishonchli usta va mutaxassislar platformasi. Santexnik, elektrchi, quruvchi va boshqa professional ustalarni toping."
+		/>
+		<meta
+			name="keywords"
+			content="usta, usta topish, santexnik, elektrchi, quruvchi, ta'mirlash, O'zbekiston, Toshkent"
+		/>
+		<meta name="robots" content="index, follow" />
+		<link rel="canonical" href="https://ustalar-sand.vercel.app/" />
+		<meta name="format-detection" content="telephone=no" />
+
+		<!-- Open Graph -->
+		<meta
+			property="og:title"
+			content="Master Group – Uyingiz uchun professional ustalarni toping"
+		/>
+		<meta
+			property="og:description"
+			content="O'zbekistondagi eng ishonchli usta va mutaxassislar platformasi. Santexnik, elektrchi, quruvchi va boshqa professional ustalarni toping."
+		/>
+		<meta property="og:type" content="website" />
+		<meta property="og:url" content="https://ustalar-sand.vercel.app/" />
+		<meta property="og:site_name" content="Master Group" />
+		<meta property="og:locale" content="uz_UZ" />
+		<meta
+			property="og:image"
+			content="https://ustalar-sand.vercel.app/og-image.png"
+		/>
+		<meta property="og:image:width" content="1200" />
+		<meta property="og:image:height" content="630" />
+		<meta property="og:image:alt" content="Master Group logotipi" />
+
+		<!-- Twitter Card -->
+		<meta name="twitter:card" content="summary_large_image" />
+		<meta
+			name="twitter:title"
+			content="Master Group – Uyingiz uchun professional ustalarni toping"
+		/>
+		<meta
+			name="twitter:description"
+			content="O'zbekistondagi eng ishonchli usta va mutaxassislar platformasi"
+		/>
+		<meta
+			name="twitter:image"
+			content="https://ustalar-sand.vercel.app/og-image.png"
+		/>
+		<meta name="twitter:site" content="@MasterGroup" />
+
+		<!-- Structured Data (JSON-LD) -->
+		<script type="application/ld+json">
+			{
+				"@context": "https://schema.org",
+				"@type": "WebSite",
+				"name": "Master Group",
+				"description": "O'zbekistondagi eng ishonchli usta va mutaxassislar platformasi",
+				"url": "https://ustalar-sand.vercel.app/",
+				"potentialAction": {
+					"@type": "SearchAction",
+					"target": "https://ustalar-sand.vercel.app/?q={search_term_string}",
+					"query-input": "required name=search_term_string"
+				}
+			}
+		</script>
+		<script type="application/ld+json">
+			{
+				"@context": "https://schema.org",
+				"@type": "Organization",
+				"name": "Master Group",
+				"url": "https://ustalar-sand.vercel.app/",
+				"logo": "https://ustalar-sand.vercel.app/icon-512x512.png",
+				"description": "O'zbekistondagi eng ishonchli usta va mutaxassislar platformasi",
+				"areaServed": {
+					"@type": "Country",
+					"name": "O'zbekiston"
+				}
+			}
+		</script>
+
+		<link rel="preconnect" href="https://fonts.googleapis.com" />
+		<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+		<!-- Both families in one request (index.css used to @import Plus
+		     Jakarta Sans a second time plus JetBrains Mono separately - a
+		     redundant fetch of a family already covered by this variable
+		     range, and @import is inherently render-blocking-late). -->
+		<!-- Loaded non-blocking (preload + swap-to-stylesheet on load): the
+		     font request was measured as a render-blocking resource costing
+		     ~1s (Lighthouse render-blocking-insight) - display:swap already
+		     lets text render in the fallback font immediately, so there's no
+		     FOIT to protect against by blocking here. -->
+		<link
+			rel="preload"
+			as="style"
+			href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:ital,wght@0,200..800;1,200..800&family=JetBrains+Mono:wght@400;500;600&display=swap"
+			onload="this.onload=null;this.rel='stylesheet'"
+		/>
+		<noscript>
+			<link
+				href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:ital,wght@0,200..800;1,200..800&family=JetBrains+Mono:wght@400;500;600&display=swap"
+				rel="stylesheet"
+			/>
+		</noscript>
+		<link rel="manifest" href="/manifest.json" />
+		<link rel="icon" type="image/x-icon" href="/favicon.ico" />
+		<link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png" />
+		<link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png" />
+		<link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png" />
+		<meta name="theme-color" content="#1D4ED8" />
+		<meta name="mobile-web-app-capable" content="yes" />
+		<meta name="apple-mobile-web-app-capable" content="yes" />
+		<meta
+			name="apple-mobile-web-app-status-bar-style"
+			content="black-translucent"
+		/>
+		<script>
+			(function () {
+				try {
+					var stored = localStorage.getItem('Usta_dark_mode');
+					var isDark =
+						stored === 'true' ||
+						(stored === null &&
+							window.matchMedia('(prefers-color-scheme: dark)').matches);
+					if (isDark) document.documentElement.classList.add('dark');
+				} catch (e) {}
+			})();
+		</script>
+	</head>
+	<body>
+		<div id="root"></div>
+		<script type="module" src="/src/main.tsx"></script>
+	</body>
+</html>

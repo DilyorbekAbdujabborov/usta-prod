@@ -1,0 +1,167 @@
+{
+	"name": "Usta - Professional Ustalar",
+	"short_name": "Usta",
+	"description": "O'zbekistondagi eng yaxshi usta va mutaxassislarni topish platformasi",
+	"id": "/",
+	"start_url": "/",
+	"display": "standalone",
+	"display_override": ["window-controls-overlay", "tabbed", "standalone", "fullscreen"],
+	"background_color": "#0F172A",
+	"theme_color": "#1D4ED8",
+	"orientation": "portrait",
+	"scope": "/",
+	"scope_extensions": [
+		{ "origin": "ustaback.pythonanywhere.com" }
+	],
+	"tab_strip": {
+		"home_tab": {
+			"scope_patterns": [{ "pathname": "/app/*" }]
+		},
+		"new_tab_button": {
+			"url": "/app"
+		}
+	},
+	"lang": "uz",
+	"dir": "ltr",
+	"categories": ["business", "lifestyle"],
+	"prefer_related_applications": false,
+	"related_applications": [
+		{
+			"platform": "play",
+			"id": "app.vercel.ustalar_sand.twa",
+			"url": "https://play.google.com/store/apps/details?id=app.vercel.ustalar_sand.twa"
+		}
+	],
+	"protocol_handlers": [
+		{
+			"protocol": "web+usta",
+			"url": "https://ustalar-sand.vercel.app/?handler=%s"
+		}
+	],
+	"iarc_rating_id": "e59e0c31-4994-465e-91f6-b0f016e1d231",
+	"icons": [
+		{
+			"src": "/icon-192x192.png",
+			"sizes": "192x192",
+			"type": "image/png",
+			"purpose": "any"
+		},
+		{
+			"src": "/icon-512x512.png",
+			"sizes": "512x512",
+			"type": "image/png",
+			"purpose": "any"
+		},
+		{
+			"src": "/icon-192x192-maskable.png",
+			"sizes": "192x192",
+			"type": "image/png",
+			"purpose": "maskable"
+		},
+		{
+			"src": "/icon-512x512-maskable.png",
+			"sizes": "512x512",
+			"type": "image/png",
+			"purpose": "maskable"
+		}
+	],
+	"screenshots": [
+		{
+			"src": "/screenshot-mobile.png",
+			"sizes": "1230x1729",
+			"type": "image/png",
+			"platform": "mobile",
+			"form_factor": "narrow",
+			"label": "Usta ilovasi — mobil qurilmada"
+		},
+		{
+			"src": "/screenshot-desktop.png",
+			"sizes": "1920x1080",
+			"type": "image/png",
+			"platform": "desktop",
+			"form_factor": "wide",
+			"label": "Usta ilovasi — ish stolida"
+		}
+	],
+	"shortcuts": [
+		{
+			"name": "Ustalar ro'yxati",
+			"short_name": "Ustalar",
+			"url": "/app",
+			"description": "Barcha professional ustalarni ko'rish",
+			"icons": [
+				{
+					"src": "/icon-192x192.png",
+					"sizes": "192x192",
+					"type": "image/png"
+				}
+			]
+		},
+		{
+			"name": "Buyurtmalarim",
+			"short_name": "Buyurtmalar",
+			"url": "/app/orders",
+			"description": "Joriy va tarixiy buyurtmalar",
+			"icons": [
+				{
+					"src": "/icon-192x192.png",
+					"sizes": "192x192",
+					"type": "image/png"
+				}
+			]
+		},
+		{
+			"name": "Profilim",
+			"short_name": "Profil",
+			"url": "/app/profile",
+			"description": "Shaxsiy profil va sozlamalar",
+			"icons": [
+				{
+					"src": "/icon-192x192.png",
+					"sizes": "192x192",
+					"type": "image/png"
+				}
+			]
+		}
+	],
+	"launch_handler": {
+		"client_mode": "navigate-existing"
+	},
+	"share_target": {
+		"action": "/",
+		"method": "GET",
+		"params": {
+			"title": "name",
+			"text": "description",
+			"url": "link"
+		}
+	},
+	"file_handlers": [
+		{
+			"action": "/",
+			"accept": {
+				"image/*": [".png", ".jpg", ".jpeg", ".webp"]
+			}
+		}
+	],
+	"widgets": [
+		{
+			"name": "Usta",
+			"description": "Tezkor ustalarni topish",
+			"tag": "usta-widget",
+			"ms_ac_template": "",
+			"data": "",
+			"links": [
+				{
+					"href": "/app"
+				}
+			]
+		}
+	],
+	"edge_side_panel": {
+		"preferred_width": 400
+	},
+	"note_taking": {
+		"new_note_url": "/app"
+	}
+}

@@ -1,0 +1,10 @@
+# Usta
+
+> O'zbekistondagi uy xizmatlari bozori (marketplace) - uy egalarini tekshirilgan ustalar (santexnik, elektrchi, quruvchi va h.k.) bilan bog'laydi.
+
+## Sahifalar
+
+- [Bosh sahifa](https://ustalar-sand.vercel.app/): Platforma haqida umumiy ma'lumot, "Kirish" va "Ro'yxatdan o'tish"ga yo'l
+- [Tizimga kirish](https://ustalar-sand.vercel.app/login): Mavjud foydalanuvchilar uchun kirish
+- [Ro'yxatdan o'tish](https://ustalar-sand.vercel.app/register): Yangi mijoz yoki usta sifatida ro'yxatdan o'tish
+- [Maxfiylik siyosati](https://ustalar-sand.vercel.app/privacy): Maxfiylik siyosati
