@@ -48,6 +48,7 @@ usta_prod/                     # Usta loyihasining production deploy repozitoriy
 │
 ├── usta_nginx.conf            # Nginx sozlamalari (proxy, static, SPA)
 ├── install-server.sh          # Serverni o'rnatish skripti (root da ishlaydi)
+├── dump-server.sh             # Server holatini server-dump.md ga yig'adi (maxfiy qiymatlar redaksiya qilinadi)
 ├── deploy.sh                  # Eski deploy skripti
 ├── about.md                   # Ushbu fayl
 └── .gitignore
@@ -111,4 +112,28 @@ barcha sessiya, JWT va push obunalari kuyadi).
 | Web push | `vapid_private.pem` yo'q bo'lsa generatsiya qilinadi, public half `.env.prod` ga yoziladi |
 | `/root` ruxsati | `chmod 755` — nginx `www-data` bo'lib ishlaydi va `0700 /root` orqali `dist/`, `static/`, `media/` ga kira olmaydi (403). Loyiha `/root` da turgani uchun shart |
 | SSL | Email berilsa `certbot --nginx --redirect`. `www.` DNS'i yo'q bo'lsa faqat asosiy domen so'raladi |
+| Cache tozalash | Oxirida apt/yarn/npm/pip download cachelari o'chiriladi, qancha joy bo'shagani yoziladi. `CLEAN_NODE_MODULES=1` bersangiz `node_modules` ham o'chadi |
 | Tekshirish | Oxirida `manage.py check --deploy` va `/`, `/api/`, `/admin/` uchun HTTP kod |
+
+## Server holatini yig'ish
+
+```bash
+cd /root/usta_prod && bash dump-server.sh
+```
+
+`server-dump.md` yaratadi: versiyalar, servislar, nginx/systemd config, ruxsatlar,
+`check --deploy`, DB jadval sanoqlari, HTTP kodlar, scrub qilingan loglar.
+
+**Repo public.** Maxfiy qiymatlar allowlist bo'yicha redaksiya qilinadi — faqat
+xavfsiz deb belgilangan kalitlar (`DEBUG`, `DB_HOST`, `ALLOWED_HOSTS` va h.k.)
+qiymati bilan chiqadi, qolgani `<set:N chars>` bo'ladi. Loglardan JWT, IP, telefon
+va parollar maskalanadi. Shunga qaramay commit qilishdan oldin o'zingiz ko'rib chiqing.
+
+## Frontend bog'liqliklari
+
+Loyiha Vercel + serverless (Neon/Drizzle/Express) dan Django backendga ko'chgan.
+Ishlatilmay qolgan paketlar olib tashlangan: `@google/genai`,
+`@neondatabase/serverless`, `bcryptjs`, `cookie`, `dotenv`, `drizzle-orm`,
+`express`, `jsonwebtoken`, `web-push`, `react-is`, `@vercel/node`, `autoprefixer`,
+`drizzle-kit`, `esbuild`, `tsx` va ularning `@types/*` fayllari. `db/` papkasi
+mavjud bo'lmagani uchun `drizzle.config.ts` va `db:*` skriptlari ham o'chirildi.

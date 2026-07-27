@@ -410,6 +410,31 @@ if [ "$IS_IP" = false ]; then
   fi
 fi
 
+# ── Cleanup ─────────────────────────────────────────────────────────
+# Everything below is a download cache: apt's .deb archive, yarn's and npm's
+# package tarballs, pip's wheel cache. All of it refills on demand, and on a
+# small VPS it adds up to more than the deploy itself.
+info "Clearing download caches..."
+DISK_BEFORE=$(df --output=avail -m / | tail -1 | tr -d ' ')
+
+apt-get clean
+apt-get autoremove -y -qq
+yarn cache clean >/dev/null 2>&1 || true
+npm cache clean --force >/dev/null 2>&1 || true
+"$INSTALL_DIR/usta-backend/venv/bin/pip" cache purge >/dev/null 2>&1 || true
+rm -rf /root/.cache/pip /root/.cache/yarn /root/.npm/_cacache 2>/dev/null || true
+
+# node_modules is ~500 MB and step 11 deletes it on every run anyway, so it is
+# only worth keeping if you rebuild the frontend by hand between deploys.
+if [ "${CLEAN_NODE_MODULES:-0}" = "1" ]; then
+  info "CLEAN_NODE_MODULES=1 — removing ustalaruz/node_modules"
+  info "(a manual 'yarn build' will need 'yarn install' first)"
+  rm -rf "$INSTALL_DIR/ustalaruz/node_modules"
+fi
+
+DISK_AFTER=$(df --output=avail -m / | tail -1 | tr -d ' ')
+ok "Caches cleared — $(( DISK_AFTER - DISK_BEFORE )) MB freed, ${DISK_AFTER} MB available"
+
 # ── Verification ────────────────────────────────────────────────────
 echo ""
 info "Django deployment checks:"
