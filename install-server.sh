@@ -41,7 +41,7 @@ echo ""
 info "[1/9] Installing system packages..."
 apt-get update -qq
 apt-get install -y -qq nginx python3 python3-venv python3-pip \
-  nodejs npm git curl libpq-dev
+  nodejs npm git curl libpq-dev yarn
 if [ "$IS_IP" = false ]; then
   apt-get install -y -qq certbot python3-certbot-nginx
 fi
@@ -101,15 +101,9 @@ ok "Django ready"
 # ── 7. Frontend build ───────────────────────────────────────────────
 info "[7/9] Building frontend..."
 cd "$INSTALL_DIR/ustalaruz"
-rm -rf node_modules package-lock.json
-npm install --no-audit --no-fund 2>&1 | tail -5
-# @tailwindcss/oxide native binding workaround (npm optional deps bug)
-if ! node -e "require('@tailwindcss/oxide')" 2>/dev/null; then
-  info "Retrying npm install for native bindings..."
-  rm -rf node_modules package-lock.json
-  npm install --no-audit --no-fund 2>&1 | tail -5
-fi
-npm run build 2>&1
+rm -rf node_modules yarn.lock
+yarn install --frozen-lockfile 2>/dev/null || yarn install 2>&1 | tail -5
+yarn build 2>&1
 cd "$INSTALL_DIR"
 ok "Frontend built"
 
