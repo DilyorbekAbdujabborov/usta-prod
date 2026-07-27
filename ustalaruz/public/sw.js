@@ -3,6 +3,12 @@ const STATIC_CACHE = `${CACHE_VERSION}-static`;
 const DYNAMIC_CACHE = `${CACHE_VERSION}-dynamic`;
 const VERSION_URL = '/api/version';
 
+// Where the last seen deploy version is kept, so a deploy can be detected by
+// comparing consecutive readings. Never wiped along with the content caches -
+// losing it would make the next check look like a fresh install.
+const VERSION_CACHE = 'usta-deploy-version';
+const VERSION_KEY = '/__deploy_version';
+
 const PRECACHE_URLS = [
   '/',
   '/index.html',
@@ -29,25 +35,43 @@ self.addEventListener('activate', (event) => {
     caches.keys().then((keys) =>
       Promise.all(
         keys
-          .filter((key) => key !== STATIC_CACHE && key !== DYNAMIC_CACHE)
+          .filter((key) => key !== STATIC_CACHE && key !== DYNAMIC_CACHE && key !== VERSION_CACHE)
           .map((key) => caches.delete(key))
       )
     ).then(() => self.clients.claim())
   );
 });
 
-// Periodic version check — force update if version changed
+// Periodic version check — force update if the deployed version changed.
+//
+// This used to compare /api/version against CACHE_VERSION ('usta-v4'). That
+// endpoint returns the backend's git SHA, so the two were never equal: every
+// check reported a version change, wiped all caches and called skipWaiting,
+// which meant the caches were permanently useless AND a real deploy was never
+// actually detected. Compare consecutive readings of the endpoint instead.
 async function checkVersionAndUpdate() {
   try {
     const response = await fetch(VERSION_URL, { cache: 'no-store', headers: { 'Cache-Control': 'no-cache' } });
     if (!response.ok) return;
     const { version } = await response.json();
-    if (version !== CACHE_VERSION) {
-      console.log(`[SW] Version changed: ${CACHE_VERSION} -> ${version}, clearing caches`);
-      const keys = await caches.keys();
-      await Promise.all(keys.map((key) => caches.delete(key)));
-      self.registration.update().then(() => self.skipWaiting());
-    }
+    if (!version) return;
+
+    const store = await caches.open(VERSION_CACHE);
+    const previous = await store.match(VERSION_KEY);
+    const previousVersion = previous ? await previous.text() : null;
+    await store.put(VERSION_KEY, new Response(version));
+
+    // First run has nothing to compare against, and an unchanged version is
+    // the normal case - neither is a reason to throw the caches away.
+    if (previousVersion === null || previousVersion === version) return;
+
+    console.log(`[SW] Deploy detected: ${previousVersion} -> ${version}, clearing caches`);
+    const keys = await caches.keys();
+    await Promise.all(
+      keys.filter((key) => key !== VERSION_CACHE).map((key) => caches.delete(key))
+    );
+    await self.registration.update();
+    self.skipWaiting();
   } catch (err) {
     console.log('[SW] Version check failed:', err);
   }

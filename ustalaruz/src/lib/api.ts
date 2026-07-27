@@ -278,7 +278,16 @@ export interface NewMasterInput {
 // only one POST /api/auth/refresh goes out - the refresh token is single-use
 // (rotated server-side), so firing it more than once would just fail the
 // second caller.
-export const API_BASE = (import.meta.env.VITE_API_BASE_URL || '').replace(/\/$/, '');
+// An ORIGIN, never a full API URL: every caller appends /api itself, as in
+// `${API_BASE}/api${path}`. A deploy that sets VITE_API_BASE_URL to
+// "https://host/api" - the obvious thing to write - produced /api/api/... and
+// a 404 on every request, so the trailing /api is stripped here rather than
+// left to each caller to get right. Empty means same-origin.
+export function normalizeApiBase(raw: string | undefined): string {
+  return (raw || '').trim().replace(/\/+$/, '').replace(/\/api$/, '');
+}
+
+export const API_BASE = normalizeApiBase(import.meta.env.VITE_API_BASE_URL);
 
 let refreshInFlight: Promise<boolean> | null = null;
 

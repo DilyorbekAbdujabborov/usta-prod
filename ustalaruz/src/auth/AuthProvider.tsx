@@ -5,9 +5,7 @@ import React, {
 	useEffect,
 	useState,
 } from 'react';
-import { authFetch, type Profile } from '../lib/api';
-
-const API_BASE = (import.meta.env.VITE_API_BASE_URL || '').replace(/\/$/, '');
+import { API_BASE, authFetch, type Profile } from '../lib/api';
 
 interface AuthContextValue {
 	profile: Profile | null;
