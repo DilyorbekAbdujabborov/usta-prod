@@ -41,10 +41,46 @@ echo ""
 info "[1/9] Installing system packages..."
 apt-get update -qq
 apt-get install -y -qq nginx python3 python3-venv python3-pip \
-  nodejs npm git curl libpq-dev yarn
+  git curl ca-certificates gnupg libpq-dev
 if [ "$IS_IP" = false ]; then
   apt-get install -y -qq certbot python3-certbot-nginx
 fi
+
+# Node.js 20 from NodeSource (Ubuntu's own nodejs is too old for Vite 6).
+# Do NOT use "apt-get install yarn" — on Debian/Ubuntu that package is
+# cmdtest, an unrelated Python tool that hijacks /usr/bin/yarn.
+for pkg in yarn cmdtest; do
+  if dpkg -s "$pkg" >/dev/null 2>&1; then
+    info "Removing apt package '$pkg' (cmdtest hijacks /usr/bin/yarn)..."
+    apt-get remove -y -qq "$pkg"
+  fi
+done
+
+NODE_MAJOR_REQUIRED=20
+node_major=0
+if command -v node >/dev/null 2>&1; then
+  node_major=$(node -p 'process.versions.node.split(".")[0]' 2>/dev/null || echo 0)
+fi
+if [ "$node_major" -lt "$NODE_MAJOR_REQUIRED" ]; then
+  info "Installing Node.js ${NODE_MAJOR_REQUIRED}.x from NodeSource (found major: $node_major)..."
+  # Ubuntu's npm/libnode-dev packages own files that NodeSource's nodejs also
+  # ships (e.g. /usr/share/man/man1/npm.1.gz), so dpkg aborts unless they go
+  # first. NodeSource nodejs bundles its own npm.
+  for pkg in npm libnode-dev nodejs-doc; do
+    if dpkg -s "$pkg" >/dev/null 2>&1; then
+      info "Removing conflicting apt package '$pkg'..."
+      apt-get remove -y -qq "$pkg"
+    fi
+  done
+  curl -fsSL "https://deb.nodesource.com/setup_${NODE_MAJOR_REQUIRED}.x" | bash -
+  apt-get install -y -qq nodejs
+fi
+
+# Real yarn, via npm (which ships with NodeSource nodejs)
+if ! yarn --version >/dev/null 2>&1; then
+  npm install -g --silent yarn
+fi
+info "node $(node --version) / npm $(npm --version) / yarn $(yarn --version)"
 ok "System packages installed"
 
 # ── 2. Clone repo ───────────────────────────────────────────────────
@@ -101,9 +137,16 @@ ok "Django ready"
 # ── 7. Frontend build ───────────────────────────────────────────────
 info "[7/9] Building frontend..."
 cd "$INSTALL_DIR/ustalaruz"
+# Clean install on the target platform. yarn ignores package-lock.json, which
+# is what we want: that lockfile can pin native optional deps
+# (@tailwindcss/oxide, rollup) for a different OS/arch. Leave it on disk so
+# `git pull` on step 2 stays clean.
 rm -rf node_modules yarn.lock
-yarn install --frozen-lockfile 2>/dev/null || yarn install 2>&1 | tail -5
+yarn install --non-interactive 2>&1 | tail -20
+node -e "require('@tailwindcss/oxide')" \
+  || fail "Native binding @tailwindcss/oxide missing after yarn install"
 yarn build 2>&1
+[ -f dist/index.html ] || fail "Frontend build produced no dist/index.html"
 cd "$INSTALL_DIR"
 ok "Frontend built"
 
