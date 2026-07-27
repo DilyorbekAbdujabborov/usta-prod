@@ -46,7 +46,9 @@ if [ "$IS_IP" = false ]; then
   apt-get install -y -qq certbot python3-certbot-nginx
 fi
 
-# Node.js 20 from NodeSource (Ubuntu's own nodejs is too old for Vite 6).
+# Node.js from NodeSource (Ubuntu's own nodejs is too old). 22 is the floor:
+# cookie requires ">=22" and @vitejs/plugin-react requires ">=22.12.0", so
+# Node 20 fails yarn's engine check.
 # Do NOT use "apt-get install yarn" — on Debian/Ubuntu that package is
 # cmdtest, an unrelated Python tool that hijacks /usr/bin/yarn.
 for pkg in yarn cmdtest; do
@@ -56,7 +58,7 @@ for pkg in yarn cmdtest; do
   fi
 done
 
-NODE_MAJOR_REQUIRED=20
+NODE_MAJOR_REQUIRED=22
 node_major=0
 if command -v node >/dev/null 2>&1; then
   node_major=$(node -p 'process.versions.node.split(".")[0]' 2>/dev/null || echo 0)
@@ -142,10 +144,13 @@ cd "$INSTALL_DIR/ustalaruz"
 # (@tailwindcss/oxide, rollup) for a different OS/arch. Leave it on disk so
 # `git pull` on step 2 stays clean.
 rm -rf node_modules yarn.lock
-yarn install --non-interactive 2>&1 | tail -20
+# Not piped into tail: this takes minutes, and buffering the output makes the
+# installer look hung.
+info "Running yarn install (this takes a few minutes)..."
+yarn install --non-interactive
 node -e "require('@tailwindcss/oxide')" \
   || fail "Native binding @tailwindcss/oxide missing after yarn install"
-yarn build 2>&1
+yarn build
 [ -f dist/index.html ] || fail "Frontend build produced no dist/index.html"
 cd "$INSTALL_DIR"
 ok "Frontend built"
