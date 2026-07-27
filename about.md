@@ -26,8 +26,10 @@ usta_prod/                     # Usta loyihasining production deploy repozitoriy
 │   ├── manage.py              # Django boshqaruv skripti
 │   ├── requirements.txt       # Python paketlar
 │   ├── seed_mock.py           # Test ma'lumotlari generatori
-│   ├── .env                   # Maxfiy o'zgaruvchilar (gitdan tashqari)
+│   ├── .env                   # Dev shabloni (gitdan tashqari)
+│   ├── .env.prod              # Production overrides — install-server.sh yozadi
 │   ├── .env.example           # .env uchun namuna
+│   ├── vapid_private.pem      # Web push maxfiy kaliti (gitdan tashqari)
 │   └── gunicorn.conf.py       # Gunicorn sozlamalari
 │
 ├── ustalaruz/                 # Frontend (Vite + React + Tailwind)
@@ -69,10 +71,11 @@ Internet
 
 | Fayl | Vazifasi |
 |---|---|
-| `install-server.sh` | Serverda root bo'lib ishga tushiriladi. Nginx, venv, Django, frontend build, systemd service ni avtomatik sozlaydi |
-| `usta_nginx.conf` | Nginx virtual host config. Domain nomini o'zgartirish kerak |
+| `install-server.sh` | Serverda root bo'lib ishga tushiriladi. Node, Postgres, Nginx, venv, Django, frontend build, systemd, SSL — hammasini avtomatik sozlaydi |
+| `usta_nginx.conf` | Nginx virtual host shabloni. `server_name` va yo'llarni script o'zi almashtiradi |
 | `usta-backend/gunicorn.conf.py` | Gunicorn worker, port, log sozlamalari |
-| `usta-backend/.env` | DJANGO_SECRET_KEY, DB, Telegram, SMS kalitlari |
+| `usta-backend/.env` | Dev shabloni. Production da buni tahrirlamang |
+| `usta-backend/.env.prod` | Production qiymatlari (`chmod 600`). `settings.py` uni `.env` dan keyin `override=True` bilan yuklaydi, ya'ni shu fayl ustun |
 | `ustalaruz/.env` | `VITE_API_BASE_URL` — backend API manzili |
 | `usta-backend/requirements.txt` | Python paketlar ro'yxati |
 | `ustalaruz/package.json` | Frontend paketlar ro'yxati |
@@ -82,5 +85,30 @@ Internet
 ```bash
 git clone https://github.com/DilyorbekAbdujabborov/usta-prod.git /root/usta_prod
 cd /root/usta_prod
-bash install-server.sh your-domain.com
+
+# Domain + SSL (2-argument = Let's Encrypt uchun email)
+bash install-server.sh your-domain.com admin@your-domain.com
+
+# Yoki faqat IP (HTTP, SSL yo'q)
+bash install-server.sh 123.123.123.123
 ```
+
+Script idempotent — qayta ishga tushirsa bo'ladi. `DJANGO_SECRET_KEY`, `DB_PASSWORD` va
+`VAPID_PUBLIC_KEY` mavjud `.env.prod` dan qayta o'qiladi, almashtirilmaydi (aks holda
+barcha sessiya, JWT va push obunalari kuyadi).
+
+## install-server.sh nimani avtomatik sozlaydi
+
+| Narsa | Tafsilot |
+|---|---|
+| Node.js | NodeSource 22.x. `apt install yarn` **ishlatilmaydi** — u cmdtest paketi, JS yarn emas |
+| Postgres | `usta` DB va `usta` role, random parol `.env.prod` ga yoziladi |
+| SQLite → Postgres | `db.sqlite3` bor bo'lsa `dumpdata` bilan eksport, migratsiyadan keyin `loaddata`. Bir marta, marker fayl orqali |
+| `DEBUG` | `.env.prod` da `False` |
+| `ALLOWED_HOSTS` | `localhost,127.0.0.1,<server>` (+ `www.`) |
+| `CSRF_TRUSTED_ORIGINS` | Server origini `CSRF_TRUSTED_ORIGINS_EXTRA` orqali qo'shiladi — aks holda HTTPS da admin login CSRF xatosi beradi |
+| Cookie secure | Domainda yoniq; IP-deploy da o'chiriladi, chunki HTTP da brauzer Secure cookie yubormaydi va admin panelga kirish imkonsiz bo'ladi |
+| Web push | `vapid_private.pem` yo'q bo'lsa generatsiya qilinadi, public half `.env.prod` ga yoziladi |
+| `/root` ruxsati | `chmod 755` — nginx `www-data` bo'lib ishlaydi va `0700 /root` orqali `dist/`, `static/`, `media/` ga kira olmaydi (403). Loyiha `/root` da turgani uchun shart |
+| SSL | Email berilsa `certbot --nginx --redirect`. `www.` DNS'i yo'q bo'lsa faqat asosiy domen so'raladi |
+| Tekshirish | Oxirida `manage.py check --deploy` va `/`, `/api/`, `/admin/` uchun HTTP kod |

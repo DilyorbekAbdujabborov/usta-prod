@@ -28,6 +28,12 @@ coverage/
 !.env.example
 .env.prod
 
+# Secrets and data exports — never commit these
+*.pem
+vapid_private.pem
+sqlite-export.json
+sqlite-export.json.loaded
+
 # IDE
 .vscode/
 .idea/

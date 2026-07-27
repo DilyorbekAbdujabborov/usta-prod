@@ -293,9 +293,16 @@ CORS_ALLOWED_ORIGINS = [
 CORS_ALLOW_CREDENTIALS = True
 
 SESSION_COOKIE_SAMESITE = 'Lax'
-SESSION_COOKIE_SECURE = not DEBUG
+# A deploy reached over plain HTTP (an IP-only server with no certificate)
+# never gets a Secure cookie back from the browser, which locks you out of
+# /admin/ even though DEBUG is correctly False. install-server.sh sets
+# SECURE_COOKIES=False in that case; otherwise this follows DEBUG.
+SECURE_COOKIES = os.getenv(
+    'SECURE_COOKIES', str(not DEBUG),
+).lower() in ('true', '1', 'yes')
+SESSION_COOKIE_SECURE = SECURE_COOKIES
 CSRF_COOKIE_SAMESITE = 'Lax'
-CSRF_COOKIE_SECURE = not DEBUG
+CSRF_COOKIE_SECURE = SECURE_COOKIES
 CSRF_USE_SESSIONS = True
 CSRF_TRUSTED_ORIGINS = [
     'https://ustalar-sand.vercel.app',
@@ -303,6 +310,16 @@ CSRF_TRUSTED_ORIGINS = [
     'https://mastergroup-uz.vercel.app',
     'http://localhost:3000',
     'http://localhost:8000',
+]
+
+# The lists above only cover the fixed dev and Vercel frontends. A self-hosted
+# deploy also has to trust its own origin or admin login fails the CSRF check
+# over HTTPS - install-server.sh knows the domain and passes it in here.
+CSRF_TRUSTED_ORIGINS += [
+    o.strip() for o in os.getenv('CSRF_TRUSTED_ORIGINS_EXTRA', '').split(',') if o.strip()
+]
+CORS_ALLOWED_ORIGINS += [
+    o.strip() for o in os.getenv('CORS_ALLOWED_ORIGINS_EXTRA', '').split(',') if o.strip()
 ]
 
 PUSH_NOTIFICATIONS_SETTINGS = {

@@ -1,35 +1,56 @@
 #!/usr/bin/env bash
 # Usta Production Server Installer
 # Run as root on Ubuntu 22.04+
-# Usage: bash install-server.sh <server-ip-or-domain>
+# Usage: bash install-server.sh <server-ip-or-domain> [email-for-ssl]
 set -euo pipefail
 
 REPO="https://github.com/DilyorbekAbdujabborov/usta-prod.git"
 INSTALL_DIR="/root/usta_prod"
 SERVER="${1:-}"
+CERTBOT_EMAIL="${2:-}"
 
-RED='\033[0;31m'; GREEN='\033[0;32m'; CYAN='\033[0;36m'; NC='\033[0m'
+DB_NAME="usta"
+DB_USER="usta"
+
+RED='\033[0;31m'; GREEN='\033[0;32m'; YELLOW='\033[0;33m'; CYAN='\033[0;36m'; NC='\033[0m'
 info()  { echo -e "${CYAN}[INFO]${NC} $1"; }
 ok()    { echo -e "${GREEN}[OK]${NC} $1"; }
+warn()  { echo -e "${YELLOW}[WARN]${NC} $1"; }
 fail()  { echo -e "${RED}[FAIL]${NC} $1"; exit 1; }
 
 if [ -z "$SERVER" ]; then
-  info "Usage: bash install-server.sh <server-ip-or-domain>"
+  info "Usage: bash install-server.sh <server-ip-or-domain> [email-for-ssl]"
   info "Example: bash install-server.sh 123.123.123.123"
-  info "Example: bash install-server.sh mydomain.com"
+  info "Example: bash install-server.sh mydomain.com admin@mydomain.com"
   exit 1
 fi
+
+[ "$(id -u)" = "0" ] || fail "Run as root"
 
 # Detect IP or domain
 if [[ "$SERVER" =~ ^[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
   IS_IP=true
   PROTO="http"
+  # A Secure cookie is never sent back over plain HTTP, so leaving these on
+  # would lock you out of /admin/ on an IP-only deploy.
+  SECURE_COOKIES=False
+  NGINX_SERVER_NAME="_"
+  ALLOWED_HOSTS="localhost,127.0.0.1,$SERVER"
+  SITE_ORIGINS="http://$SERVER"
   info "Server type: IP ($SERVER) — HTTP only (no SSL)"
 else
   IS_IP=false
   PROTO="https"
+  SECURE_COOKIES=True
+  NGINX_SERVER_NAME="$SERVER www.$SERVER"
+  ALLOWED_HOSTS="localhost,127.0.0.1,$SERVER,www.$SERVER"
+  SITE_ORIGINS="https://$SERVER,https://www.$SERVER"
   info "Server type: Domain ($SERVER) — with SSL"
 fi
+
+ENV_PROD="$INSTALL_DIR/usta-backend/.env.prod"
+SQLITE_DB="$INSTALL_DIR/usta-backend/db.sqlite3"
+SQLITE_DUMP="$INSTALL_DIR/usta-backend/sqlite-export.json"
 
 info "===== Usta Production Setup ====="
 info "Server: $SERVER"
@@ -38,10 +59,11 @@ info "Install dir: $INSTALL_DIR"
 echo ""
 
 # ── 1. System packages ──────────────────────────────────────────────
-info "[1/9] Installing system packages..."
+info "[1/12] Installing system packages..."
 apt-get update -qq
 apt-get install -y -qq nginx python3 python3-venv python3-pip \
-  git curl ca-certificates gnupg libpq-dev
+  postgresql postgresql-contrib libpq-dev \
+  git curl sudo ca-certificates gnupg openssl
 if [ "$IS_IP" = false ]; then
   apt-get install -y -qq certbot python3-certbot-nginx
 fi
@@ -86,7 +108,7 @@ info "node $(node --version) / npm $(npm --version) / yarn $(yarn --version)"
 ok "System packages installed"
 
 # ── 2. Clone repo ───────────────────────────────────────────────────
-info "[2/9] Cloning repository..."
+info "[2/12] Cloning repository..."
 if [ -d "$INSTALL_DIR" ]; then
   info "Directory exists, pulling latest..."
   cd "$INSTALL_DIR" && git pull
@@ -96,28 +118,27 @@ fi
 cd "$INSTALL_DIR"
 ok "Repository cloned"
 
-# ── 3. Backend .env ─────────────────────────────────────────────────
-info "[3/9] Configuring backend environment..."
+# ── 3. Backend .env (development defaults) ──────────────────────────
+info "[3/12] Configuring backend environment..."
+# .env stays the unmodified template. Everything production-specific goes into
+# .env.prod in step 6, which core/settings.py loads afterwards with
+# override=True — no fragile sed against a file whose placeholders may change.
 if [ ! -f "$INSTALL_DIR/usta-backend/.env" ]; then
   cp "$INSTALL_DIR/usta-backend/.env.example" "$INSTALL_DIR/usta-backend/.env"
-  DJANGO_SECRET=$(python3 -c "import secrets; print(secrets.token_urlsafe(50))")
-  sed -i "s/change-me-to-a-real-secret-key/$DJANGO_SECRET/" "$INSTALL_DIR/usta-backend/.env"
-  sed -i "s/your-domain.com/$SERVER/g" "$INSTALL_DIR/usta-backend/.env"
-  ok ".env created with random secret key"
+  ok ".env created from .env.example"
 else
-  info ".env already exists, updating ALLOWED_HOSTS..."
-  sed -i "s/ALLOWED_HOSTS=.*/ALLOWED_HOSTS=localhost,127.0.0.1,$SERVER/" "$INSTALL_DIR/usta-backend/.env"
+  info ".env already exists, leaving it alone"
 fi
 
 # ── 4. Frontend .env ────────────────────────────────────────────────
-info "[4/9] Configuring frontend environment..."
+info "[4/12] Configuring frontend environment..."
 cat > "$INSTALL_DIR/ustalaruz/.env" <<EOF
 VITE_API_BASE_URL=$PROTO://$SERVER/api
 EOF
 ok "Frontend .env configured"
 
 # ── 5. Python virtual environment ───────────────────────────────────
-info "[5/9] Setting up Python virtual environment..."
+info "[5/12] Setting up Python virtual environment..."
 python3 -m venv "$INSTALL_DIR/usta-backend/venv"
 source "$INSTALL_DIR/usta-backend/venv/bin/activate"
 pip install --upgrade pip -q
@@ -125,25 +146,168 @@ pip install -r "$INSTALL_DIR/usta-backend/requirements.txt" -q
 pip install gunicorn -q
 ok "Python venv ready"
 
-# ── 6. Django setup ─────────────────────────────────────────────────
-info "[6/9] Running Django migrations and collecting static files..."
+# ── 6. Export existing SQLite data ──────────────────────────────────
+# Must run before .env.prod exists, because that file is what switches
+# DB_TYPE to postgres. Skipped once the dump is on disk so a re-run can't
+# overwrite a good export with an empty one.
+info "[6/12] Checking for existing SQLite data..."
+if [ -f "$SQLITE_DB" ] && [ ! -f "$ENV_PROD" ] && [ ! -f "$SQLITE_DUMP" ]; then
+  info "SQLite database found — exporting before the switch to Postgres..."
+  cd "$INSTALL_DIR/usta-backend"
+  # contenttypes/permissions are recreated by migrate; re-importing them
+  # collides with the fresh rows. Sessions and admin history aren't worth
+  # the natural-key trouble.
+  DB_TYPE=sqlite python manage.py dumpdata \
+    --natural-foreign --natural-primary --indent 2 \
+    -e contenttypes -e auth.permission -e sessions -e admin.logentry \
+    -o "$SQLITE_DUMP" || fail "dumpdata failed — not touching the database"
+  chmod 600 "$SQLITE_DUMP"
+  ok "Exported to $SQLITE_DUMP ($(wc -c <"$SQLITE_DUMP") bytes)"
+  cd "$INSTALL_DIR"
+else
+  info "Nothing to export (no db.sqlite3, or already migrated)"
+fi
+
+# ── 7. Postgres database ────────────────────────────────────────────
+info "[7/12] Provisioning Postgres..."
+systemctl enable --now postgresql
+
+# Reuse the password already in .env.prod, otherwise a re-run would rotate it
+# and lock Django out of its own database.
+if [ -f "$ENV_PROD" ] && grep -q '^DB_PASSWORD=' "$ENV_PROD"; then
+  DB_PASSWORD=$(grep -m1 '^DB_PASSWORD=' "$ENV_PROD" | cut -d= -f2-)
+  info "Reusing DB password from .env.prod"
+else
+  DB_PASSWORD=$(python3 -c "import secrets; print(secrets.token_urlsafe(24))")
+fi
+
+# Passwords go in over stdin, never as an argv the whole box can read in ps.
+if ! sudo -u postgres psql -tAc "SELECT 1 FROM pg_roles WHERE rolname='$DB_USER'" | grep -q 1; then
+  sudo -u postgres psql -q <<SQL
+CREATE ROLE $DB_USER LOGIN PASSWORD '$DB_PASSWORD';
+SQL
+  ok "Postgres role '$DB_USER' created"
+else
+  # Covers a role left over from an earlier install whose password we lost.
+  sudo -u postgres psql -q <<SQL
+ALTER ROLE $DB_USER PASSWORD '$DB_PASSWORD';
+SQL
+  info "Postgres role '$DB_USER' already exists — password reset to match .env.prod"
+fi
+
+if ! sudo -u postgres psql -tAc "SELECT 1 FROM pg_database WHERE datname='$DB_NAME'" | grep -q 1; then
+  # -O makes the role the database owner, which is what grants it CREATE on
+  # schema public (Postgres 15+ revoked that from PUBLIC).
+  sudo -u postgres createdb -O "$DB_USER" "$DB_NAME"
+  ok "Database '$DB_NAME' created"
+else
+  info "Database '$DB_NAME' already exists"
+fi
+
+# ── 8. Production environment overrides ─────────────────────────────
+info "[8/12] Writing .env.prod..."
+if [ -f "$ENV_PROD" ] && grep -q '^DJANGO_SECRET_KEY=' "$ENV_PROD"; then
+  # Rotating the key would invalidate every session, CSRF token, JWT and
+  # pending password-reset code, so keep the one already in use.
+  DJANGO_SECRET=$(grep -m1 '^DJANGO_SECRET_KEY=' "$ENV_PROD" | cut -d= -f2-)
+  info "Keeping the existing DJANGO_SECRET_KEY"
+else
+  DJANGO_SECRET=$(python3 -c "import secrets; print(secrets.token_urlsafe(50))")
+  info "Generated a new DJANGO_SECRET_KEY"
+fi
+
+# Preserve VAPID_PUBLIC_KEY across re-runs: it is the public half of
+# vapid_private.pem, and every push subscription in the database is bound to
+# it. Step 10 appends it the first time.
+VAPID_PUBLIC_KEY_LINE=""
+if [ -f "$ENV_PROD" ] && grep -q '^VAPID_PUBLIC_KEY=' "$ENV_PROD"; then
+  VAPID_PUBLIC_KEY_LINE=$(grep -m1 '^VAPID_PUBLIC_KEY=' "$ENV_PROD")
+fi
+
+cat > "$ENV_PROD" <<EOF
+# Generated by install-server.sh — production overrides.
+# core/settings.py loads this after .env with override=True, so these win.
+# Gitignored. Do not commit; do not paste its contents anywhere.
+DJANGO_SECRET_KEY=$DJANGO_SECRET
+DEBUG=False
+ALLOWED_HOSTS=$ALLOWED_HOSTS
+SECURE_COOKIES=$SECURE_COOKIES
+CSRF_TRUSTED_ORIGINS_EXTRA=$SITE_ORIGINS
+CORS_ALLOWED_ORIGINS_EXTRA=$SITE_ORIGINS
+DB_TYPE=postgres
+DB_NAME=$DB_NAME
+DB_USER=$DB_USER
+DB_PASSWORD=$DB_PASSWORD
+DB_HOST=localhost
+DB_PORT=5432
+$VAPID_PUBLIC_KEY_LINE
+EOF
+chmod 600 "$ENV_PROD"
+ok ".env.prod written (DEBUG=False, Postgres, secure cookies=$SECURE_COOKIES)"
+
+# ── 9. Django setup ─────────────────────────────────────────────────
+info "[9/12] Running migrations and collecting static files..."
 cd "$INSTALL_DIR/usta-backend"
 source venv/bin/activate
 mkdir -p logs
-python manage.py migrate --run-syncdb
-python manage.py createcachetable || true
+python manage.py migrate
+python manage.py createcachetable
+
+# Import the SQLite export exactly once. Marker file rather than a row count,
+# because a partially loaded fixture must not be replayed on top of itself.
+if [ -f "$SQLITE_DUMP" ] && [ ! -f "$SQLITE_DUMP.loaded" ]; then
+  info "Importing SQLite export into Postgres..."
+  python manage.py loaddata "$SQLITE_DUMP" \
+    || fail "loaddata failed. Postgres is migrated but empty; the export is still at $SQLITE_DUMP and db.sqlite3 is untouched."
+  touch "$SQLITE_DUMP.loaded"
+  ok "Data imported"
+fi
+
 python manage.py collectstatic --noinput --clear
 cd "$INSTALL_DIR"
 ok "Django ready"
 
-# ── 7. Frontend build ───────────────────────────────────────────────
-info "[7/9] Building frontend..."
+# ── 10. Web push VAPID key ──────────────────────────────────────────
+info "[10/12] Checking web push VAPID key..."
+cd "$INSTALL_DIR/usta-backend"
+if [ ! -f vapid_private.pem ]; then
+  warn "vapid_private.pem missing — generating a new keypair."
+  warn "Push subscriptions made with an older key will stop working. If you"
+  warn "still have the original .pem, stop now, copy it to"
+  warn "$INSTALL_DIR/usta-backend/vapid_private.pem and re-run."
+  openssl ecparam -name prime256v1 -genkey -noout -out vapid_private.pem
+  chmod 600 vapid_private.pem
+  source venv/bin/activate
+  VAPID_PUB=$(python - <<'PY'
+import base64
+from cryptography.hazmat.primitives import serialization
+
+with open('vapid_private.pem', 'rb') as fh:
+    key = serialization.load_pem_private_key(fh.read(), password=None)
+raw = key.public_key().public_bytes(
+    serialization.Encoding.X962,
+    serialization.PublicFormat.UncompressedPoint,
+)
+print(base64.urlsafe_b64encode(raw).rstrip(b'=').decode())
+PY
+)
+  [ -n "$VAPID_PUB" ] || fail "Could not derive the VAPID public key"
+  # settings.py serves this to the frontend via /api/push/public-key/
+  sed -i '/^VAPID_PUBLIC_KEY=/d' "$ENV_PROD"
+  echo "VAPID_PUBLIC_KEY=$VAPID_PUB" >> "$ENV_PROD"
+  ok "VAPID keypair generated"
+else
+  info "vapid_private.pem already present"
+fi
+cd "$INSTALL_DIR"
+
+# ── 11. Frontend build ──────────────────────────────────────────────
+info "[11/12] Building frontend..."
 cd "$INSTALL_DIR/ustalaruz"
-# Clean install on the target platform. yarn ignores package-lock.json, which
-# is what we want: that lockfile can pin native optional deps
-# (@tailwindcss/oxide, rollup) for a different OS/arch. Leave it on disk so
-# `git pull` on step 2 stays clean.
-rm -rf node_modules yarn.lock
+# package-lock.json is gitignored and untracked here, left behind by the
+# pre-yarn installer. Removing it silences yarn's mixed-lockfile warning and
+# costs nothing.
+rm -rf node_modules yarn.lock package-lock.json
 # Not piped into tail: this takes minutes, and buffering the output makes the
 # installer look hung.
 info "Running yarn install (this takes a few minutes)..."
@@ -155,9 +319,24 @@ yarn build
 cd "$INSTALL_DIR"
 ok "Frontend built"
 
-# ── 8. Nginx configuration ──────────────────────────────────────────
-info "[8/9] Configuring Nginx..."
-sed "s|/root/usta_prod|$INSTALL_DIR|g" \
+# ── 12. Nginx + Gunicorn ────────────────────────────────────────────
+info "[12/12] Configuring Nginx and Gunicorn..."
+
+# Nginx workers run as www-data and cannot traverse a 0700 /root, which makes
+# every request for the SPA, /static/ and /media/ a 403. The project lives
+# under /root, so /root itself has to be traversable.
+if [ "$(stat -c '%a' /root)" != "755" ]; then
+  warn "chmod 755 /root — anything else under /root becomes world-readable too."
+  chmod 755 /root
+fi
+chmod 755 "$INSTALL_DIR" "$INSTALL_DIR/ustalaruz" "$INSTALL_DIR/usta-backend"
+chmod -R a+rX "$INSTALL_DIR/ustalaruz/dist" "$INSTALL_DIR/usta-backend/staticfiles"
+[ -d "$INSTALL_DIR/usta-backend/media" ] && chmod -R a+rX "$INSTALL_DIR/usta-backend/media"
+# The secrets stay unreadable regardless of the above.
+chmod 600 "$ENV_PROD" "$INSTALL_DIR/usta-backend/.env"
+
+sed -e "s|/root/usta_prod|$INSTALL_DIR|g" \
+    -e "s|server_name _;|server_name $NGINX_SERVER_NAME;|" \
   "$INSTALL_DIR/usta_nginx.conf" > /etc/nginx/sites-available/usta
 
 if [ -f /etc/nginx/sites-enabled/default ]; then
@@ -181,12 +360,11 @@ nginx -t || fail "Nginx config test failed"
 systemctl restart nginx
 ok "Nginx configured and running"
 
-# ── 9. Gunicorn systemd service ─────────────────────────────────────
-info "[9/9] Creating Gunicorn systemd service..."
 cat > /etc/systemd/system/usta-gunicorn.service <<UNIT
 [Unit]
 Description=Usta Django Gunicorn
-After=network.target
+After=network.target postgresql.service
+Wants=postgresql.service
 
 [Service]
 Type=simple
@@ -194,6 +372,7 @@ User=root
 Group=root
 WorkingDirectory=$INSTALL_DIR/usta-backend
 EnvironmentFile=$INSTALL_DIR/usta-backend/.env
+EnvironmentFile=-$INSTALL_DIR/usta-backend/.env.prod
 ExecStart=$INSTALL_DIR/usta-backend/venv/bin/gunicorn \\
   --config $INSTALL_DIR/usta-backend/gunicorn.conf.py
 ExecReload=/bin/kill -s HUP \$MAINPID
@@ -212,10 +391,43 @@ systemctl enable usta-gunicorn
 systemctl restart usta-gunicorn
 ok "Gunicorn service started"
 
+# ── SSL ─────────────────────────────────────────────────────────────
+if [ "$IS_IP" = false ]; then
+  if [ -n "$CERTBOT_EMAIL" ]; then
+    info "Requesting a Let's Encrypt certificate for $SERVER..."
+    CERT_DOMAINS=(-d "$SERVER")
+    # Asking for a hostname with no DNS record fails the whole request.
+    if getent hosts "www.$SERVER" >/dev/null 2>&1; then
+      CERT_DOMAINS+=(-d "www.$SERVER")
+    else
+      info "www.$SERVER does not resolve — requesting the bare domain only"
+    fi
+    certbot --nginx -n --agree-tos -m "$CERTBOT_EMAIL" --redirect \
+      "${CERT_DOMAINS[@]}" || warn "certbot failed — site is up on HTTP; see the output above"
+  else
+    warn "No SSL: pass an email as the 2nd argument to request a certificate,"
+    warn "or run: certbot --nginx -d $SERVER"
+  fi
+fi
+
+# ── Verification ────────────────────────────────────────────────────
+echo ""
+info "Django deployment checks:"
+cd "$INSTALL_DIR/usta-backend"
+source venv/bin/activate
+python manage.py check --deploy 2>&1 | tail -20 || true
+cd "$INSTALL_DIR"
+
+echo ""
+info "Local HTTP check:"
+echo "  /       -> $(curl -s -o /dev/null -w '%{http_code}' localhost/ || echo 'no answer')"
+echo "  /api/   -> $(curl -s -o /dev/null -w '%{http_code}' localhost/api/version || echo 'no answer')"
+echo "  /admin/ -> $(curl -s -o /dev/null -w '%{http_code}' localhost/admin/ || echo 'no answer')"
+
 # ── Done ────────────────────────────────────────────────────────────
 echo ""
 ok "====== Setup complete ======"
-ok "App is running at: http://$SERVER"
+ok "App is running at: $PROTO://$SERVER"
 echo ""
 echo -e "${CYAN}Next steps:${NC}"
 echo "  1. Create superuser:"
@@ -228,10 +440,11 @@ echo ""
 echo "  3. View logs:"
 echo "     tail -f $INSTALL_DIR/usta-backend/logs/gunicorn_error.log"
 echo ""
-echo "  4. Edit environment variables:"
-echo "     nano $INSTALL_DIR/usta-backend/.env"
-if [ "$IS_IP" = false ]; then
+echo "  4. Production settings live in usta-backend/.env.prod (chmod 600)."
+echo "     Edit that file, not .env, then: systemctl restart usta-gunicorn"
+if [ -f "$SQLITE_DUMP.loaded" ]; then
   echo ""
-  echo "  5. SSL certificate:"
-  echo "     certbot --nginx -d $SERVER -d www.$SERVER"
+  echo "  5. Data was imported from SQLite. Once you have verified the site,"
+  echo "     delete the export (it contains user data in plain text):"
+  echo "     rm $SQLITE_DUMP $SQLITE_DUMP.loaded"
 fi
