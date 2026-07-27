@@ -19,6 +19,7 @@ interface AuthContextValue {
 		code: string,
 		name?: string
 	) => Promise<{ user: Profile; isNewAccount: boolean }>;
+	loginWithPassword: (phone: string, password: string) => Promise<Profile>;
 	logout: () => Promise<void>;
 	refreshProfile: () => Promise<void>;
 	setProfile: (profile: Profile) => void;
@@ -85,8 +86,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 	}, []);
 
 	// Sign-in and sign-up are one phone-first flow (see AuthView): the SMS code
-	// IS the credential, so there is no password login, registration or reset
-	// path on the client any more. The /auth/login, /auth/register-* and
+	// IS the credential, so there is no registration or password-reset path on
+	// the client any more, and password sign-in exists only on the unlinked
+	// /staff-login route (loginWithPassword below). The /auth/register-* and
 	// /auth/reset-* endpoints still exist server-side for legacy accounts.
 	//
 	// Step 1 of the phone-first flow: always sends a code, and tells the UI
@@ -122,6 +124,18 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 		[]
 	);
 
+	// Password sign-in for staff. The phone-first flow above is the only way in
+	// for ordinary users, but it depends on SMS reaching the handset, which is
+	// a bad thing for an administrator to be blocked by. /auth/login has always
+	// existed server-side (rate limited, with a per-phone lockout); this just
+	// gives it a caller again, on a route the normal UI does not link to.
+	const loginWithPassword = useCallback(async (phone: string, password: string) => {
+		const data = await authRequest<{ user: Profile }>('/auth/login', { phone, password });
+		setProfile(data.user);
+		localStorage.setItem('Usta_has_session', 'true');
+		return data.user;
+	}, []);
+
 	const logout = useCallback(async () => {
 		await authRequest('/auth/logout');
 		setProfile(null);
@@ -136,6 +150,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 				isSignedIn: !!profile,
 				startPhoneAuth,
 				verifyPhoneAuth,
+				loginWithPassword,
 				logout,
 				refreshProfile,
 				setProfile,

@@ -37,6 +37,7 @@ const AdminDashboard = lazy(() => import('./components/AdminDashboard'));
 const PrivacyPolicy = lazy(() => import('./components/PrivacyPolicy'));
 const Guide = lazy(() => import('./components/Guide'));
 const NotFoundPage = lazy(() => import('./components/NotFoundPage'));
+const StaffLogin = lazy(() => import('./components/StaffLogin'));
 
 interface UserSession {
 	phone: string;
@@ -755,6 +756,24 @@ export default function App() {
 											</div>
 										)}
 									</motion.div>
+								}
+							/>
+
+							{/* Xodimlar uchun parol bilan kirish. Ataylab hech qayerdan
+							    havola qilinmagan - SMS yetib kelmasa admin qolib ketmasligi
+							    uchun zaxira yo'l. */}
+							<Route
+								path="/staff-login"
+								element={
+									<div className="w-full max-w-md flex flex-col items-center relative">
+										<AmbientBackground />
+										<div className="relative z-10 w-full bg-white dark:bg-surface border border-slate-200 dark:border-border rounded-xl p-5 sm:p-8 shadow-auth-card">
+											<StaffLogin
+												onSuccess={(m) => showToast(m, 'success')}
+												onError={handleFormError}
+											/>
+										</div>
+									</div>
 								}
 							/>
 
