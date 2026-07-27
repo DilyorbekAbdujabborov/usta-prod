@@ -1,21 +1,39 @@
 #!/usr/bin/env bash
 # Usta Production Server Installer
 # Run as root on Ubuntu 22.04+
-# Usage: bash install-server.sh
+# Usage: bash install-server.sh <server-ip-or-domain>
 set -euo pipefail
 
 REPO="https://github.com/DilyorbekAbdujabborov/usta-prod.git"
 INSTALL_DIR="/root/usta_prod"
-DOMAIN="${1:-your-domain.com}"
+SERVER="${1:-}"
 
-# Colors
 RED='\033[0;31m'; GREEN='\033[0;32m'; CYAN='\033[0;36m'; NC='\033[0m'
 info()  { echo -e "${CYAN}[INFO]${NC} $1"; }
 ok()    { echo -e "${GREEN}[OK]${NC} $1"; }
 fail()  { echo -e "${RED}[FAIL]${NC} $1"; exit 1; }
 
-info "===== Usta Production Server Setup ====="
-info "Domain: $DOMAIN"
+if [ -z "$SERVER" ]; then
+  info "Usage: bash install-server.sh <server-ip-or-domain>"
+  info "Example: bash install-server.sh 123.123.123.123"
+  info "Example: bash install-server.sh mydomain.com"
+  exit 1
+fi
+
+# Detect IP or domain
+if [[ "$SERVER" =~ ^[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+  IS_IP=true
+  PROTO="http"
+  info "Server type: IP ($SERVER) — HTTP only (no SSL)"
+else
+  IS_IP=false
+  PROTO="https"
+  info "Server type: Domain ($SERVER) — with SSL"
+fi
+
+info "===== Usta Production Setup ====="
+info "Server: $SERVER"
+info "Protocol: $PROTO"
 info "Install dir: $INSTALL_DIR"
 echo ""
 
@@ -23,7 +41,10 @@ echo ""
 info "[1/9] Installing system packages..."
 apt-get update -qq
 apt-get install -y -qq nginx python3 python3-venv python3-pip \
-  nodejs npm certbot python3-certbot-nginx git curl libpq-dev
+  nodejs npm git curl libpq-dev
+if [ "$IS_IP" = false ]; then
+  apt-get install -y -qq certbot python3-certbot-nginx
+fi
 ok "System packages installed"
 
 # ── 2. Clone repo ───────────────────────────────────────────────────
@@ -43,16 +64,17 @@ if [ ! -f "$INSTALL_DIR/usta-backend/.env" ]; then
   cp "$INSTALL_DIR/usta-backend/.env.example" "$INSTALL_DIR/usta-backend/.env"
   DJANGO_SECRET=$(python3 -c "import secrets; print(secrets.token_urlsafe(50))")
   sed -i "s/change-me-to-a-real-secret-key/$DJANGO_SECRET/" "$INSTALL_DIR/usta-backend/.env"
-  sed -i "s/your-domain.com/$DOMAIN/g" "$INSTALL_DIR/usta-backend/.env"
+  sed -i "s/your-domain.com/$SERVER/g" "$INSTALL_DIR/usta-backend/.env"
   ok ".env created with random secret key"
 else
-  info ".env already exists, skipping"
+  info ".env already exists, updating ALLOWED_HOSTS..."
+  sed -i "s/ALLOWED_HOSTS=.*/ALLOWED_HOSTS=localhost,127.0.0.1,$SERVER/" "$INSTALL_DIR/usta-backend/.env"
 fi
 
 # ── 4. Frontend .env ────────────────────────────────────────────────
 info "[4/9] Configuring frontend environment..."
 cat > "$INSTALL_DIR/ustalaruz/.env" <<EOF
-VITE_API_BASE_URL=https://$DOMAIN/api
+VITE_API_BASE_URL=$PROTO://$SERVER/api
 EOF
 ok "Frontend .env configured"
 
@@ -86,7 +108,7 @@ ok "Frontend built"
 
 # ── 8. Nginx configuration ──────────────────────────────────────────
 info "[8/9] Configuring Nginx..."
-sed "s|your-domain.com|$DOMAIN|g; s|/root/usta_prod|$INSTALL_DIR|g" \
+sed "s|/root/usta_prod|$INSTALL_DIR|g" \
   "$INSTALL_DIR/usta_nginx.conf" > /etc/nginx/sites-available/usta
 
 if [ -f /etc/nginx/sites-enabled/default ]; then
@@ -144,20 +166,23 @@ ok "Gunicorn service started"
 # ── Done ────────────────────────────────────────────────────────────
 echo ""
 ok "====== Setup complete ======"
+ok "App is running at: http://$SERVER"
 echo ""
 echo -e "${CYAN}Next steps:${NC}"
-echo "  1. SSL certificate (HTTPS):"
-echo "     certbot --nginx -d $DOMAIN -d www.$DOMAIN"
-echo ""
-echo "  2. Create superuser:"
+echo "  1. Create superuser:"
 echo "     cd $INSTALL_DIR/usta-backend && source venv/bin/activate && python manage.py createsuperuser"
 echo ""
-echo "  3. Check service status:"
+echo "  2. Check service status:"
 echo "     systemctl status usta-gunicorn --no-pager -l"
 echo "     systemctl status nginx --no-pager -l"
 echo ""
-echo "  4. View logs:"
+echo "  3. View logs:"
 echo "     tail -f $INSTALL_DIR/usta-backend/logs/gunicorn_error.log"
 echo ""
-echo "  5. Edit environment variables:"
+echo "  4. Edit environment variables:"
 echo "     nano $INSTALL_DIR/usta-backend/.env"
+if [ "$IS_IP" = false ]; then
+  echo ""
+  echo "  5. SSL certificate:"
+  echo "     certbot --nginx -d $SERVER -d www.$SERVER"
+fi
