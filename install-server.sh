@@ -69,10 +69,13 @@ if [ "$IS_IP" = false ]; then
 fi
 
 # Node.js from NodeSource (Ubuntu's own nodejs is too old). 22 is the floor:
-# cookie requires ">=22" and @vitejs/plugin-react requires ">=22.12.0", so
-# Node 20 fails yarn's engine check.
-# Do NOT use "apt-get install yarn" — on Debian/Ubuntu that package is
-# cmdtest, an unrelated Python tool that hijacks /usr/bin/yarn.
+# @vitejs/plugin-react declares engines.node ">=22.12.0".
+# The build uses npm, which ships with nodejs. Yarn 1 cannot install this
+# dependency tree at all: vitest peer-depends on vite and its linker aborts
+# with "could not find a copy of vite to link in node_modules/vitest".
+# Removing the apt packages below anyway — "apt-get install yarn" pulls in
+# cmdtest, an unrelated Python tool that hijacks /usr/bin/yarn, and an
+# earlier version of this script installed it.
 for pkg in yarn cmdtest; do
   if dpkg -s "$pkg" >/dev/null 2>&1; then
     info "Removing apt package '$pkg' (cmdtest hijacks /usr/bin/yarn)..."
@@ -100,11 +103,7 @@ if [ "$node_major" -lt "$NODE_MAJOR_REQUIRED" ]; then
   apt-get install -y -qq nodejs
 fi
 
-# Real yarn, via npm (which ships with NodeSource nodejs)
-if ! yarn --version >/dev/null 2>&1; then
-  npm install -g --silent yarn
-fi
-info "node $(node --version) / npm $(npm --version) / yarn $(yarn --version)"
+info "node $(node --version) / npm $(npm --version)"
 ok "System packages installed"
 
 # ── 2. Clone repo ───────────────────────────────────────────────────
@@ -151,7 +150,13 @@ ok "Python venv ready"
 # DB_TYPE to postgres. Skipped once the dump is on disk so a re-run can't
 # overwrite a good export with an empty one.
 info "[6/12] Checking for existing SQLite data..."
-if [ -f "$SQLITE_DB" ] && [ ! -f "$ENV_PROD" ] && [ ! -f "$SQLITE_DUMP" ]; then
+# A leftover db.sqlite3 is not evidence that SQLite is in use — .env may
+# already point at Postgres, in which case that file is a stale dev artefact
+# and importing it would add rows the live database never had.
+PRIOR_DB_TYPE=$(grep -m1 '^DB_TYPE=' "$INSTALL_DIR/usta-backend/.env" 2>/dev/null | cut -d= -f2- || true)
+if [ -n "${PRIOR_DB_TYPE:-}" ] && [ "$PRIOR_DB_TYPE" != "sqlite" ]; then
+  info ".env already uses '$PRIOR_DB_TYPE' — skipping the SQLite export"
+elif [ -f "$SQLITE_DB" ] && [ ! -f "$ENV_PROD" ] && [ ! -f "$SQLITE_DUMP" ]; then
   info "SQLite database found — exporting before the switch to Postgres..."
   cd "$INSTALL_DIR/usta-backend"
   # contenttypes/permissions are recreated by migrate; re-importing them
@@ -172,13 +177,33 @@ fi
 info "[7/12] Provisioning Postgres..."
 systemctl enable --now postgresql
 
-# Reuse the password already in .env.prod, otherwise a re-run would rotate it
-# and lock Django out of its own database.
+env_get() { grep -m1 "^$1=" "$2" 2>/dev/null | cut -d= -f2- || true; }
+
+ADOPTED_DB=false
 if [ -f "$ENV_PROD" ] && grep -q '^DB_PASSWORD=' "$ENV_PROD"; then
-  DB_PASSWORD=$(grep -m1 '^DB_PASSWORD=' "$ENV_PROD" | cut -d= -f2-)
-  info "Reusing DB password from .env.prod"
+  # Re-run: keep using whatever the last run settled on. Rotating the password
+  # or switching databases here would lock Django out of its own data.
+  DB_NAME=$(env_get DB_NAME "$ENV_PROD")
+  DB_USER=$(env_get DB_USER "$ENV_PROD")
+  DB_PASSWORD=$(env_get DB_PASSWORD "$ENV_PROD")
+  ADOPTED_DB=true
+  info "Reusing the database named in .env.prod: $DB_NAME (user $DB_USER)"
 else
-  DB_PASSWORD=$(python3 -c "import secrets; print(secrets.token_urlsafe(24))")
+  # First run against a server that was already deployed by hand: .env may
+  # point at a populated Postgres database. Provisioning a fresh empty one and
+  # pointing Django at it looks exactly like total data loss, so adopt it.
+  EXISTING_DB_TYPE=$(env_get DB_TYPE "$INSTALL_DIR/usta-backend/.env")
+  EXISTING_DB_NAME=$(env_get DB_NAME "$INSTALL_DIR/usta-backend/.env")
+  if [ -n "$EXISTING_DB_NAME" ] && [ "${EXISTING_DB_TYPE:-sqlite}" != "sqlite" ]; then
+    DB_NAME="$EXISTING_DB_NAME"
+    DB_USER=$(env_get DB_USER "$INSTALL_DIR/usta-backend/.env")
+    DB_PASSWORD=$(env_get DB_PASSWORD "$INSTALL_DIR/usta-backend/.env")
+    ADOPTED_DB=true
+    info "Adopting the Postgres database already configured in .env: $DB_NAME (user $DB_USER)"
+  else
+    DB_PASSWORD=$(python3 -c "import secrets; print(secrets.token_urlsafe(24))")
+    info "No existing Postgres config — provisioning $DB_NAME"
+  fi
 fi
 
 # Passwords go in over stdin, never as an argv the whole box can read in ps.
@@ -187,6 +212,8 @@ if ! sudo -u postgres psql -tAc "SELECT 1 FROM pg_roles WHERE rolname='$DB_USER'
 CREATE ROLE $DB_USER LOGIN PASSWORD '$DB_PASSWORD';
 SQL
   ok "Postgres role '$DB_USER' created"
+elif [ "$ADOPTED_DB" = true ]; then
+  info "Postgres role '$DB_USER' already exists — leaving its password alone"
 else
   # Covers a role left over from an earlier install whose password we lost.
   sudo -u postgres psql -q <<SQL
@@ -304,17 +331,19 @@ cd "$INSTALL_DIR"
 # ── 11. Frontend build ──────────────────────────────────────────────
 info "[11/12] Building frontend..."
 cd "$INSTALL_DIR/ustalaruz"
-# package-lock.json is gitignored and untracked here, left behind by the
-# pre-yarn installer. Removing it silences yarn's mixed-lockfile warning and
-# costs nothing.
+# package-lock.json is gitignored, so whatever is on disk was resolved on
+# whoever's machine ran npm install last. A lockfile from another OS pins the
+# wrong native optional deps (@tailwindcss/oxide, rollup) and they end up
+# missing here - that is the "npm native binding" failure this script used to
+# work around. Resolving fresh on the target machine avoids it outright.
 rm -rf node_modules yarn.lock package-lock.json
 # Not piped into tail: this takes minutes, and buffering the output makes the
 # installer look hung.
-info "Running yarn install (this takes a few minutes)..."
-yarn install --non-interactive
+info "Running npm install (this takes a few minutes)..."
+npm install --no-audit --no-fund
 node -e "require('@tailwindcss/oxide')" \
-  || fail "Native binding @tailwindcss/oxide missing after yarn install"
-yarn build
+  || fail "Native binding @tailwindcss/oxide missing after npm install"
+npm run build
 [ -f dist/index.html ] || fail "Frontend build produced no dist/index.html"
 cd "$INSTALL_DIR"
 ok "Frontend built"
@@ -411,15 +440,14 @@ if [ "$IS_IP" = false ]; then
 fi
 
 # ── Cleanup ─────────────────────────────────────────────────────────
-# Everything below is a download cache: apt's .deb archive, yarn's and npm's
-# package tarballs, pip's wheel cache. All of it refills on demand, and on a
+# Everything below is a download cache: apt's .deb archive, npm's package
+# tarballs, pip's wheel cache. All of it refills on demand, and on a
 # small VPS it adds up to more than the deploy itself.
 info "Clearing download caches..."
 DISK_BEFORE=$(df --output=avail -m / | tail -1 | tr -d ' ')
 
 apt-get clean
 apt-get autoremove -y -qq
-yarn cache clean >/dev/null 2>&1 || true
 npm cache clean --force >/dev/null 2>&1 || true
 "$INSTALL_DIR/usta-backend/venv/bin/pip" cache purge >/dev/null 2>&1 || true
 rm -rf /root/.cache/pip /root/.cache/yarn /root/.npm/_cacache 2>/dev/null || true
@@ -428,7 +456,7 @@ rm -rf /root/.cache/pip /root/.cache/yarn /root/.npm/_cacache 2>/dev/null || tru
 # only worth keeping if you rebuild the frontend by hand between deploys.
 if [ "${CLEAN_NODE_MODULES:-0}" = "1" ]; then
   info "CLEAN_NODE_MODULES=1 — removing ustalaruz/node_modules"
-  info "(a manual 'yarn build' will need 'yarn install' first)"
+  info "(a manual 'npm run build' will need 'npm install' first)"
   rm -rf "$INSTALL_DIR/ustalaruz/node_modules"
 fi
 
@@ -441,6 +469,20 @@ info "Django deployment checks:"
 cd "$INSTALL_DIR/usta-backend"
 source venv/bin/activate
 python manage.py check --deploy 2>&1 | tail -20 || true
+
+# Pointing at the wrong database is silent otherwise: everything migrates,
+# every service starts, and the site just has no users in it.
+echo ""
+info "Database in use:"
+python manage.py shell -c "
+from django.conf import settings
+from django.contrib.auth import get_user_model
+d = settings.DATABASES['default']
+n = get_user_model().objects.count()
+print(f\"  {d['ENGINE'].rsplit('.', 1)[-1]}: {d['NAME']} on {d.get('HOST') or 'local'}\")
+print(f'  users: {n}')
+print('  WARNING: no users — is this the database you expected?' if n == 0 else '')
+" 2>&1 | tail -5
 cd "$INSTALL_DIR"
 
 echo ""
