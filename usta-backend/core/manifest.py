@@ -78,7 +78,7 @@ def manifest_view(request):
             },
         ],
         "protocol_handlers": [
-            {"protocol": "web+usta", "url": "https://ustalar-sand.vercel.app/?handler=%s"},
+            {"protocol": "web+usta", "url": "https://mastergroup.uz/?handler=%s"},
         ],
         "iarc_rating_id": "e59e0c31-4994-465e-91f6-b0f016e1d231",
         "icons": icons,

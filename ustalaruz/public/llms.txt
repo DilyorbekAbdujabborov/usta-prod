@@ -4,7 +4,7 @@
 
 ## Sahifalar
 
-- [Bosh sahifa](https://ustalar-sand.vercel.app/): Platforma haqida umumiy ma'lumot, "Kirish" va "Ro'yxatdan o'tish"ga yo'l
-- [Tizimga kirish](https://ustalar-sand.vercel.app/login): Mavjud foydalanuvchilar uchun kirish
-- [Ro'yxatdan o'tish](https://ustalar-sand.vercel.app/register): Yangi mijoz yoki usta sifatida ro'yxatdan o'tish
-- [Maxfiylik siyosati](https://ustalar-sand.vercel.app/privacy): Maxfiylik siyosati
+- [Bosh sahifa](https://mastergroup.uz/): Platforma haqida umumiy ma'lumot, "Kirish" va "Ro'yxatdan o'tish"ga yo'l
+- [Tizimga kirish](https://mastergroup.uz/login): Mavjud foydalanuvchilar uchun kirish
+- [Ro'yxatdan o'tish](https://mastergroup.uz/register): Yangi mijoz yoki usta sifatida ro'yxatdan o'tish
+- [Maxfiylik siyosati](https://mastergroup.uz/privacy): Maxfiylik siyosati

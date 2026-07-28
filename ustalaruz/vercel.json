@@ -1,7 +1,7 @@
 {
   "rewrites": [
-    { "source": "/api/(.*)", "destination": "https://ustaback.pythonanywhere.com/api/$1" },
-    { "source": "/manifest.json", "destination": "https://ustaback.pythonanywhere.com/manifest.json" },
+    { "source": "/api/(.*)", "destination": "https://mastergroup.uz/api/$1" },
+    { "source": "/manifest.json", "destination": "https://mastergroup.uz/manifest.json" },
     { "source": "/(.*)", "destination": "/index.html" }
   ],
   "headers": [

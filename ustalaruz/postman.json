@@ -6,7 +6,7 @@
     "_exporter_id": "opencode"
   },
   "variable": [
-    { "key": "baseUrl", "value": "https://ustalar-sand.vercel.app", "type": "string" },
+    { "key": "baseUrl", "value": "https://mastergroup.uz", "type": "string" },
     { "key": "accessToken", "value": "", "type": "string" },
     { "key": "refreshToken", "value": "", "type": "string" }
   ],

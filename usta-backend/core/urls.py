@@ -17,12 +17,12 @@ from categories import views as categories_views
 from enterprise import views as enterprise_views
 
 def web_app_origin_association(request):
-    # Lets ustalar-sand.vercel.app's PWA claim this origin via
+    # Lets mastergroup.uz's PWA claim this origin via
     # manifest.json's scope_extensions, per the Origin Trial spec:
     # https://github.com/WICG/manifest-incubations/blob/gh-pages/scope_extensions-explainer.md
     return JsonResponse({
         'web_apps': [
-            {'web_app_identity': 'https://ustalar-sand.vercel.app'},
+            {'web_app_identity': 'https://mastergroup.uz'},
         ],
     })
 

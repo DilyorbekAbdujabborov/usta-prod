@@ -176,4 +176,4 @@ Disallow: /login
 Disallow: /register
 Disallow: /api/
 
-Sitemap: https://ustalar-sand.vercel.app/sitemap.xml
+Sitemap: https://mastergroup.uz/sitemap.xml

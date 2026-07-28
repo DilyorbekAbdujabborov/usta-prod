@@ -1,8 +1,7 @@
 """User-agent based bot/scraper guard for the API.
 
 The Vercel edge WAF only sees traffic that goes through
-ustalar-sand.vercel.app. This backend is directly reachable at
-ustaback.pythonanywhere.com, so anything relying purely on the edge is
+mastergroup.uz. Anything relying purely on the edge is
 one hostname away from being bypassed - this is the layer that actually
 holds, and it runs before any view code.
 

@@ -282,9 +282,7 @@ SIMPLE_JWT = {
 
 CORS_ALLOW_ALL_ORIGINS = False
 CORS_ALLOWED_ORIGINS = [
-    'https://ustalar-sand.vercel.app',
-    'https://ustalar-rbf4fu22u-abrobeydev.vercel.app',
-    'https://mastergroup-uz.vercel.app',
+    'https://mastergroup.uz',
     'http://localhost:5173',
     'http://127.0.0.1:5173',
     'http://localhost:3000',
@@ -305,9 +303,7 @@ CSRF_COOKIE_SAMESITE = 'Lax'
 CSRF_COOKIE_SECURE = SECURE_COOKIES
 CSRF_USE_SESSIONS = True
 CSRF_TRUSTED_ORIGINS = [
-    'https://ustalar-sand.vercel.app',
-    'https://ustaback.pythonanywhere.com',
-    'https://mastergroup-uz.vercel.app',
+    'https://mastergroup.uz',
     'http://localhost:3000',
     'http://localhost:8000',
 ]

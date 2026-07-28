@@ -15,7 +15,7 @@ Ikkita yo'l bor — birini tanlang:
 
 ## 0-qadam: Oldindan tayyor bo'lishi kerak narsalar
 
-- [x] Sayt production'da ishlayapti: `https://ustalar-sand.vercel.app`
+- [x] Sayt production'da ishlayapti: `https://mastergroup.uz`
 - [x] `manifest.json` to'g'ri (tekshirildi — `name`, `short_name`, `icons` 192x192 va 512x512 mavjud)
 - [ ] **Google Play Console akkaunti** — https://play.google.com/console — bir martalik $25
       to'lov (agar hali ochilmagan bo'lsa)
@@ -36,7 +36,7 @@ Ikkita yo'l bor — birini tanlang:
 ## A) PWABuilder orqali (eng oson, hech narsa o'rnatilmaydi)
 
 1. Brauzerda oching: **https://www.pwabuilder.com**
-2. "Enter your URL" maydoniga kiriting: `https://ustalar-sand.vercel.app`
+2. "Enter your URL" maydoniga kiriting: `https://mastergroup.uz`
 3. "Start" bosing — PWABuilder manifest, service worker va ikonkalarni tekshiradi va
    ballar beradi (Manifest / Service Worker / Security).
    - Service Worker yo'qligi haqida ogohlantirishi mumkin — bu **AAB yaratishga
@@ -71,7 +71,7 @@ git commit -m "Add Digital Asset Links for TWA verification"
 Keyin qayta deploy qiling (`vercel --prod`) va tekshiring:
 
 ```bash
-curl https://ustalar-sand.vercel.app/.well-known/assetlinks.json
+curl https://mastergroup.uz/.well-known/assetlinks.json
 ```
 
 JSON qaytishi kerak (bo'sh yoki 404 bo'lsa — TWA ochilganda adres satri ko'rinaveradi).
@@ -86,7 +86,7 @@ Agar to'liq nazorat kerak bo'lsa yoki offline build qilmoqchi bo'lsangiz:
 # Talablar: Node.js (bor), JDK 17, Android SDK (Bubblewrap avtomatik o'rnatib beradi)
 npm install -g @bubblewrap/cli
 
-bubblewrap init --manifest https://ustalar-sand.vercel.app/manifest.json
+bubblewrap init --manifest https://mastergroup.uz/manifest.json
 # Savollarga javob bering: package ID (app.vercel.ustalar_sand.twa), keystore parolini yarating
 
 bubblewrap build
@@ -139,8 +139,8 @@ kabi `public/.well-known/assetlinks.json` ga qo'yib, qayta deploy qiling.
 ## Tezkor tekshiruv ro'yxati (deploy qilishdan oldin)
 
 ```bash
-curl -s https://ustalar-sand.vercel.app/manifest.json | head -c 200
-curl -s -o /dev/null -w "%{http_code}\n" https://ustalar-sand.vercel.app/.well-known/assetlinks.json
+curl -s https://mastergroup.uz/manifest.json | head -c 200
+curl -s -o /dev/null -w "%{http_code}\n" https://mastergroup.uz/.well-known/assetlinks.json
 ```
 
 Ikkalasi ham to'g'ri javob qaytarsa — AAB Play Console'ga yuklashga tayyor.
