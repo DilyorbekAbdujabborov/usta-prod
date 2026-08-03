@@ -1,0 +1,394 @@
+{
+  "openapi": "3.0.3",
+  "info": {
+    "title": "OurID Passport Data API",
+    "description": "FastAPI wrapper/proxy for the BSA passport data retrieval service. Accepts user PIN and passport number, forwards the request to the upstream BSA API, and returns the decoded passport data including unicode escape handling.",
+    "version": "1.0.0",
+    "contact": {
+      "name": "OurID API Support",
+      "url": "https://demo-test.bsa.uz"
+    },
+    "license": {
+      "name": "MIT",
+      "url": "https://opensource.org/licenses/MIT"
+    }
+  },
+  "servers": [
+    {
+      "url": "http://localhost:8000",
+      "description": "Local development server"
+    },
+    {
+      "url": "https://api.ourid.example.com",
+      "description": "Production server"
+    }
+  ],
+  "tags": [
+    {
+      "name": "Passport",
+      "description": "Passport data retrieval endpoints"
+    },
+    {
+      "name": "Health",
+      "description": "Health check and status endpoints"
+    }
+  ],
+  "paths": {
+    "/api/get-passport-data": {
+      "post": {
+        "tags": ["Passport"],
+        "summary": "Get passport data by PIN and passport number",
+        "description": "Forwards a request to the BSA upstream API to retrieve passport data using the user's PIN and passport document number. The response includes personal information, document details, and a base64-encoded photo.",
+        "operationId": "getPassportData",
+        "requestBody": {
+          "description": "Passport lookup request",
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PassportRequest"
+              },
+              "example": {
+                "user_pin": "30201011234567",
+                "passport": "DD1071414"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful passport data retrieval",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PassportDataResponse"
+                },
+                "example": {
+                  "success": true,
+                  "data": {
+                    "document": "DD1071414",
+"pin": "30201011234567",
+            "surname_latin": "Palonchiyev",
+            "name_latin": "Kimdur",
+            "patronym_latin": "Nimadur o'g'li",
+            "livestatus": 1,
+            "surname_engl": null,
+            "name_engl": null,
+            "birth_date": "2000-12-31",
+            "birth_place": "ШАҚАРКИШЛАКСКИЙ РАЙОН",
+            "birth_country": "УЗБЕКИСТАН",
+            "nationality": "УЗБЕК/УЗБЕЧКА",
+            "nationalityid": 4,
+            "sex": 1,
+            "citizenship": "УЗБЕКИСТАН",
+            "citizenshipid": 12,
+            "photo": "/9j/4AAQSkZJRgABAQEAYABgAAD//Z",
+            "doc_give_place": "ПАЛОНЧИНСКИЙ РОВД ПАЛОНЧИНСКОЙ ОБЛАСТИ",
+            "date_begin_document": "2025-08-14",
+            "date_end_document": "2030-08-13"
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation error — missing or invalid request fields",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                },
+                "example": {
+                  "detail": [
+                    {
+                      "loc": ["body", "user_pin"],
+                      "msg": "field required",
+                      "type": "value_error.missing"
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Unprocessable entity — invalid input data",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Upstream API internal error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                },
+                "example": {
+                  "detail": "Upstream API error: 500"
+                }
+              }
+            }
+          },
+          "502": {
+            "description": "Upstream API unreachable or returned invalid JSON",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "504": {
+            "description": "Upstream API request timed out",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                },
+                "example": {
+                  "detail": "Upstream API request timed out"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/health": {
+      "get": {
+        "tags": ["Health"],
+        "summary": "Health check endpoint",
+        "description": "Returns the health status of the wrapper service and the configured upstream API URL.",
+        "operationId": "healthCheck",
+        "responses": {
+          "200": {
+            "description": "Service is healthy",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HealthResponse"
+                },
+                "example": {
+                  "status": "ok",
+                  "target_url": "https://demo-test.bsa.uz/api/get-passport-data"
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "PassportRequest": {
+        "type": "object",
+        "required": ["user_pin", "passport"],
+        "properties": {
+          "user_pin": {
+            "type": "string",
+            "description": "JShShIR (PINFL) — 14 raqamli fuqaro identifikatsiya kodi. Faqat raqamlardan iborat.\n\nMisol: `30201011234567`",
+            "minLength": 14,
+            "maxLength": 14,
+            "pattern": "^[0-9]{14}$",
+            "example": "30201011234567"
+          },
+          "passport": {
+            "type": "string",
+            "description": "O'zbekistondagi fuqaro pasporti yoki ID kartasi hujjat raqami.\n\n### 🪪 Eski biometrik pasport\n- Seriya: 2 ta lotin harfi (masalan: `AA`, `AB`, `AC`)\n- Raqam: 7 ta raqam (masalan: `1234567`)\n- To'liq format: `AA1234567` (9 belgi)\n\n### 🆔 ID karta\n- Hujjat raqami: 2 ta lotin harfi + 7 ta raqam\n- Masalan: `AC1234567`\n\nMisol: `DD1071414`",
+            "minLength": 9,
+            "maxLength": 9,
+            "pattern": "^[A-Za-z]{2}[0-9]{7}$",
+            "example": "DD1071414"
+          }
+        },
+        "example": {
+          "user_pin": "30201011234567",
+          "passport": "DD1071414"
+        }
+      },
+      "PassportData": {
+        "type": "object",
+        "description": "Passport data returned by the BSA API",
+        "properties": {
+          "document": {
+            "type": "string",
+            "description": "Pasport seriyasi va raqami. Format: 2 lotin harfi + 7 raqam (9 belgi).\n\nMisol: `DD1071414`",
+            "minLength": 9,
+            "maxLength": 9,
+            "pattern": "^[A-Za-z]{2}[0-9]{7}$",
+            "example": "DD1071414"
+          },
+          "pin": {
+            "type": "string",
+            "description": "JShShIR (PINFL) — 14 raqamli fuqaro identifikatsiya kodi.\n\nMisol: `30201011234567`",
+            "minLength": 14,
+            "maxLength": 14,
+            "pattern": "^[0-9]{14}$",
+            "example": "30201011234567"
+          },
+          "surname_latin": {
+            "type": "string",
+            "description": "Surname in Latin script",
+            "example": "Palonchiyev"
+          },
+          "name_latin": {
+            "type": "string",
+            "description": "First name in Latin script",
+            "example": "Kimdur"
+          },
+          "patronym_latin": {
+            "type": "string",
+            "description": "Patronymic in Latin script",
+            "example": "Nimadur o'g'li"
+          },
+          "livestatus": {
+            "type": "integer",
+            "description": "Live status (1 = alive)",
+            "example": 1
+          },
+          "surname_engl": {
+            "type": ["string", "null"],
+            "description": "Surname in English (if available)",
+            "nullable": true,
+            "example": null
+          },
+          "name_engl": {
+            "type": ["string", "null"],
+            "description": "First name in English (if available)",
+            "nullable": true,
+            "example": null
+          },
+          "birth_date": {
+            "type": "string",
+            "description": "Date of birth in YYYY-MM-DD format",
+            "example": "2000-12-31"
+          },
+          "birth_place": {
+            "type": "string",
+            "description": "Place of birth (may contain unicode characters)",
+            "example": "ШАҚАРКИШЛАКСКИЙ РАЙОН"
+          },
+          "birth_country": {
+            "type": "string",
+            "description": "Country of birth",
+            "example": "УЗБЕКИСТАН"
+          },
+          "nationality": {
+            "type": "string",
+            "description": "Nationality",
+            "example": "УЗБЕК/УЗБЕЧКА"
+          },
+          "nationalityid": {
+            "type": "integer",
+            "description": "Nationality ID",
+            "example": 4
+          },
+          "sex": {
+            "type": "integer",
+            "description": "Gender (1 = male, 2 = female)",
+            "example": 1
+          },
+          "citizenship": {
+            "type": "string",
+            "description": "Citizenship",
+            "example": "УЗБЕКИСТАН"
+          },
+          "citizenshipid": {
+            "type": "integer",
+            "description": "Citizenship ID",
+            "example": 12
+          },
+          "photo": {
+            "type": "string",
+            "description": "Base64-encoded passport photo",
+            "example": "/9j/4AAQSkZJRgABAQEAYABgAAD//Z"
+          },
+          "doc_give_place": {
+            "type": "string",
+            "description": "Place where the document was issued",
+            "example": "ПАЛОНЧИНСКИЙ РОВД ПАЛОНЧИНСКОЙ ОБЛАСТИ"
+          },
+          "date_begin_document": {
+            "type": "string",
+            "description": "Document start date in YYYY-MM-DD format",
+            "example": "2025-08-14"
+          },
+          "date_end_document": {
+            "type": "string",
+            "description": "Document end date in YYYY-MM-DD format",
+            "example": "2030-08-13"
+          }
+        }
+      },
+      "PassportDataResponse": {
+        "type": "object",
+        "description": "Successful response containing passport data",
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "description": "Indicates successful retrieval",
+            "example": true
+          },
+          "data": {
+            "$ref": "#/components/schemas/PassportData",
+            "description": "Passport data object"
+          }
+        },
+        "example": {
+          "success": true,
+          "data": {
+            "document": "DD1071414",
+            "pin": "30201011234567",
+            "surname_latin": "Palonchiyev",
+            "name_latin": "Kimdur",
+            "patronym_latin": "Nimadur o'g'li",
+            "livestatus": 1,
+            "birth_date": "2000-12-31",
+            "birth_place": "ШАҚАРКИШЛАКСКИЙ РАЙОН",
+            "birth_country": "УЗБЕКИСТАН",
+            "nationality": "УЗБЕК/УЗБЕЧКА",
+            "sex": 1,
+            "citizenship": "УЗБЕКИСТАН",
+            "photo": "/9j/4AAQSkZJRgABAQEAYABgAAD//Z"
+          }
+        }
+      },
+      "ErrorResponse": {
+        "type": "object",
+        "description": "Error response",
+        "properties": {
+          "detail": {
+            "type": "string",
+            "description": "Error message",
+            "example": "Upstream API error: 500"
+          }
+        },
+        "example": {
+          "detail": "Upstream API error: 500"
+        }
+      },
+      "HealthResponse": {
+        "type": "object",
+        "description": "Health check response",
+        "properties": {
+          "status": {
+            "type": "string",
+            "description": "Service status",
+            "example": "ok"
+          },
+          "target_url": {
+            "type": "string",
+            "description": "Configured upstream API URL",
+            "example": "https://demo-test.bsa.uz/api/get-passport-data"
+          }
+        }
+      }
+    }
+  }
+}
