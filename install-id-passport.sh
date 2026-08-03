@@ -34,11 +34,26 @@ pip install --upgrade pip -q
 pip install -r "$APP_DIR/requirements.txt" -q
 ok "Python venv ready"
 
-# ── 3. Environment file ─────────────────────────────────────────────
+# ── 3. Environment file + API key ───────────────────────────────────
 info "[3/5] Configuring environment file..."
 if [ ! -f "$APP_DIR/.env" ]; then
   cp "$APP_DIR/.env.example" "$APP_DIR/.env"
   info "  -> Created $APP_DIR/.env from example (edit TARGET_URL if needed)"
+fi
+
+if ! grep -q "^API_KEY_HASH=.\+" "$APP_DIR/.env"; then
+  API_KEY="$(openssl rand -hex 32)"
+  API_KEY_HASH="$(printf '%s' "$API_KEY" | sha256sum | cut -d' ' -f1)"
+  if grep -q "^API_KEY_HASH=" "$APP_DIR/.env"; then
+    sed -i "s|^API_KEY_HASH=.*|API_KEY_HASH=$API_KEY_HASH|" "$APP_DIR/.env"
+  else
+    echo "API_KEY_HASH=$API_KEY_HASH" >> "$APP_DIR/.env"
+  fi
+  warn "Generated a new API key - save this now, it is shown only once and"
+  warn "cannot be recovered from the hash stored in .env:"
+  echo ""
+  echo "  X-API-Key: $API_KEY"
+  echo ""
 fi
 
 # ── 4. Nginx site ────────────────────────────────────────────────────
