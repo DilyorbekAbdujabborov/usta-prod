@@ -9,6 +9,22 @@ const VERSION_URL = '/api/version';
 const VERSION_CACHE = 'usta-deploy-version';
 const VERSION_KEY = '/__deploy_version';
 
+// Runtime cache has no natural eviction (unlike precache, which is fixed
+// size) - every unique navigation/asset URL a visitor hits adds an entry
+// that lives until the next deploy wipe. Trim oldest-first past this count
+// so long-lived sessions between deploys don't grow the cache unbounded.
+const DYNAMIC_CACHE_MAX_ENTRIES = 100;
+
+async function trimCache(cacheName, maxEntries) {
+  const cache = await caches.open(cacheName);
+  const keys = await cache.keys();
+  if (keys.length <= maxEntries) return;
+  const excess = keys.length - maxEntries;
+  for (let i = 0; i < excess; i++) {
+    await cache.delete(keys[i]);
+  }
+}
+
 const PRECACHE_URLS = [
   '/',
   '/index.html',
@@ -98,7 +114,7 @@ self.addEventListener('fetch', (event) => {
       fetch(request)
         .then((response) => {
           const clone = response.clone();
-          caches.open(DYNAMIC_CACHE).then((cache) => cache.put(request, clone));
+          caches.open(DYNAMIC_CACHE).then((cache) => cache.put(request, clone)).then(() => trimCache(DYNAMIC_CACHE, DYNAMIC_CACHE_MAX_ENTRIES));
           return response;
         })
         .catch(() => caches.match(request).then((cached) => cached || caches.match('/offline.html')))
@@ -122,7 +138,7 @@ self.addEventListener('fetch', (event) => {
         .then((response) => {
           if (response.ok) {
             const clone = response.clone();
-            caches.open(DYNAMIC_CACHE).then((cache) => cache.put(request, clone));
+            caches.open(DYNAMIC_CACHE).then((cache) => cache.put(request, clone)).then(() => trimCache(DYNAMIC_CACHE, DYNAMIC_CACHE_MAX_ENTRIES));
           }
           return response;
         })
@@ -138,7 +154,7 @@ self.addEventListener('fetch', (event) => {
       return fetch(request).then((response) => {
         if (response.ok) {
           const clone = response.clone();
-          caches.open(DYNAMIC_CACHE).then((cache) => cache.put(request, clone));
+          caches.open(DYNAMIC_CACHE).then((cache) => cache.put(request, clone)).then(() => trimCache(DYNAMIC_CACHE, DYNAMIC_CACHE_MAX_ENTRIES));
         }
         return response;
       });
