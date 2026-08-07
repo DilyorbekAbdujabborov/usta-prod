@@ -282,6 +282,8 @@ const {
                                 src={masterOrder.masterAvatar}
                                 alt={masterOrder.masterName}
                                 className="w-9 h-9 rounded-xl object-cover avatar-face border border-slate-200 dark:border-slate-700"
+                                loading="lazy"
+                                decoding="async"
                               />
                             )}
                             {!masterOrder.masterAvatar && (

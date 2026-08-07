@@ -159,7 +159,7 @@ export default function EnterpriseTab({ data }: { data: AdminData }) {
 							<div className="flex items-start gap-3">
 								<div className="w-24 h-24 rounded-xl overflow-hidden border border-border bg-surface-secondary flex items-center justify-center shrink-0">
 									{ef.image ? (
-										<img src={ef.image} alt="E'lon rasmi" className="w-full h-full object-cover" />
+										<img src={ef.image} alt="E'lon rasmi" className="w-full h-full object-cover" loading="lazy" decoding="async" />
 									) : (
 										<ImageIcon size={20} className="text-text-muted" />
 									)}
@@ -241,6 +241,8 @@ export default function EnterpriseTab({ data }: { data: AdminData }) {
 											alt={order.title}
 											className="w-full h-28 object-cover"
 											referrerPolicy="no-referrer"
+											loading="lazy"
+											decoding="async"
 										/>
 									)}
 									<div className="p-3.5 flex flex-col gap-2">
