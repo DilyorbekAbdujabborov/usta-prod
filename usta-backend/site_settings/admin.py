@@ -34,16 +34,45 @@ class SiteSettingsAdmin(admin.ModelAdmin):
         ('Ko\'rinish', {
             'fields': ('total_users_override', 'logotype_path'),
         }),
-        ('PWA Manifest (manifest.json)', {
+        ('PWA Manifest - asosiy', {
             'fields': (
                 'manifest_name',
                 'manifest_short_name',
                 'manifest_description',
                 'manifest_theme_color',
                 'manifest_background_color',
+                'manifest_id',
+                'manifest_start_url',
+                'manifest_scope',
+                'manifest_display',
+                'manifest_orientation',
+                'manifest_lang',
+                'manifest_dir',
+                'manifest_categories',
+                'manifest_iarc_rating_id',
             ),
             'description': 'Ushbu maydonlar /manifest.json ga to\'g\'ridan-to\'g\'ri chiqadi - '
                             'saqlagach frontend qayta deploy qilinmasdan ham qo\'llanadi.',
+        }),
+        ('PWA Manifest - qo\'shimcha (JSON)', {
+            'fields': (
+                'manifest_display_override',
+                'manifest_prefer_related_applications',
+                'manifest_related_applications',
+                'manifest_protocol_handlers',
+                'manifest_screenshots',
+                'manifest_shortcuts',
+                'manifest_share_target',
+                'manifest_file_handlers',
+                'manifest_widgets',
+                'manifest_launch_handler',
+                'manifest_edge_side_panel',
+                'manifest_note_taking',
+                'manifest_tab_strip',
+            ),
+            'classes': ('collapse',),
+            'description': 'Murakkab manifest.json maydonlari - JSON formatda kiritiladi. '
+                            'Format xato bo\'lsa, standart qiymat ishlatiladi.',
         }),
         ('Xavfsizlik', {
             'fields': ('disable_devtools',),
